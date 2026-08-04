@@ -1,0 +1,322 @@
+# Narrative evaluation set: situations rather than questions.
+#
+# Real users rarely ask "what does Article 17 say". They describe what happened
+# and ask whether it was allowed. That is a different retrieval problem: one
+# story usually touches several articles, and embedding the whole paragraph
+# retrieves a blurry average of all of them.
+#
+# Fields:
+#   scenario      - the story as a user would write it
+#   perspective   - who is telling it (subject / organisation / neutral)
+#   articles      - every article needed to answer properly. Unlike the
+#                   question set, these are a *set to cover*, not alternatives:
+#                   scoring should ask what fraction were retrieved, because an
+#                   answer citing the right and missing the exception is wrong
+#                   in the way that matters most.
+#   sub_questions - the decomposition a competent adviser would perform. This
+#                   is ground truth for a decomposition step, and is the reason
+#                   these are worth labelling by hand.
+#   missing_facts - what an adviser would have to ask before committing to an
+#                   answer. Surfacing these is the difference between a useful
+#                   tool and a confident one.
+#
+# Where a scenario turns on something the GDPR does not govern, that is stated
+# in `out_of_scope` rather than quietly omitted.
+
+- id: s001
+  scenario: >-
+    I asked my gym to delete my account and all my data. They said they have to
+    keep my records for seven years for accounting reasons, so they refused. Is
+    that allowed?
+  perspective: subject
+  articles: [Article 17, Article 5, Article 6]
+  sub_questions:
+    - Does the individual have a right to erasure here?
+    - Does a legal retention obligation override that right?
+    - How long may data be kept once its original purpose has ended?
+  missing_facts:
+    - Which law imposes the seven-year retention, and does it cover this data?
+    - Whether all of the data is covered, or only billing records
+  difficulty: medium
+  note: The exemption in Article 17(3) is the whole answer; retrieving only Article 17 is a fail.
+
+- id: s002
+  scenario: >-
+    Our company wants to start monitoring employee email to catch data leaks.
+    Legal says we need a lawful basis. Can we rely on legitimate interest, and
+    do we have to tell staff beforehand?
+  perspective: organisation
+  articles: [Article 6, Article 13, Article 88, Article 5]
+  sub_questions:
+    - Is legitimate interest available for employee monitoring?
+    - What must employees be told, and when?
+    - Do national employment rules add requirements?
+  missing_facts:
+    - Whether a balancing test has been carried out and documented
+    - Which member state's employment law applies
+  difficulty: hard
+
+- id: s003
+  scenario: >-
+    A laptop was stolen from one of our staff on Friday evening. It had a
+    spreadsheet with about 400 customer names, emails and order histories. The
+    disk was encrypted. It is now Monday. What do we have to do?
+  perspective: organisation
+  articles: [Article 33, Article 34, Article 32]
+  sub_questions:
+    - Is this a personal data breach that must be reported to the authority?
+    - Does the 72-hour clock start at the theft or at discovery?
+    - Must the affected customers be told as well?
+    - Does encryption change the obligation?
+  missing_facts:
+    - When the organisation became aware, as opposed to when the theft happened
+    - The strength of the encryption and whether keys were also exposed
+  difficulty: medium
+  note: Encryption bears on Article 34 (notifying individuals) but not on Article 33.
+
+- id: s004
+  scenario: >-
+    I left my job last year and asked HR for everything they hold on me. They
+    sent my contract and payslips but refused to give me my manager's notes
+    from performance reviews, saying those are internal opinions. Can they
+    withhold that?
+  perspective: subject
+  articles: [Article 15, Article 4, Article 12]
+  sub_questions:
+    - Does the right of access cover opinions held about a person?
+    - Can a controller withhold parts of a response, and on what grounds?
+    - What must the controller explain when refusing?
+  missing_facts:
+    - Whether the notes identify other people whose rights would be affected
+  difficulty: hard
+
+- id: s005
+  scenario: >-
+    We are a small Swedish startup about to move our customer database to a US
+    cloud provider. Our CTO says it is fine because the provider is big and has
+    certifications. Is there anything we need to do first?
+  perspective: organisation
+  articles: [Article 44, Article 46, Article 28, Article 45]
+  sub_questions:
+    - Is this an international transfer at all?
+    - Is there an adequacy decision covering the destination?
+    - What safeguards are required if not?
+    - What must the contract with the provider contain?
+  missing_facts:
+    - Whether data is actually stored or merely accessible from outside the EU
+    - Whether the provider acts as processor or as an independent controller
+  difficulty: medium
+
+- id: s006
+  scenario: >-
+    Our website shows a cookie banner but we set analytics cookies before the
+    user clicks anything. We also email everyone who ever bought from us with
+    monthly offers. Someone said this is illegal. Which part?
+  perspective: organisation
+  articles: [Article 6, Article 7, Article 21]
+  out_of_scope:
+    - Cookie consent itself is governed by the ePrivacy Directive, not the GDPR
+  sub_questions:
+    - What makes consent valid, and does a pre-ticked or pre-fired cookie qualify?
+    - Is a lawful basis needed for the marketing emails?
+    - Must recipients be able to object?
+  missing_facts:
+    - Whether recipients are existing customers and how their addresses were obtained
+  difficulty: hard
+  note: A good answer names the ePrivacy boundary rather than answering the cookie half from the GDPR.
+
+- id: s007
+  scenario: >-
+    We are installing CCTV in our shop, including one camera pointing at the
+    street outside. Do we need to do anything beyond putting up a sign?
+  perspective: organisation
+  articles: [Article 6, Article 13, Article 35, Article 5]
+  sub_questions:
+    - What lawful basis covers video surveillance?
+    - What information must be given, and how?
+    - Does this require a data protection impact assessment?
+    - Does filming public space change the analysis?
+  missing_facts:
+    - Whether footage is retained, for how long, and who can access it
+  difficulty: medium
+
+- id: s008
+  scenario: >-
+    Our mobile game is popular with 12-year-olds. We collect email addresses to
+    let players save progress. Do we need parental permission, and does it
+    differ across the EU?
+  perspective: organisation
+  articles: [Article 8, Article 6, Article 12]
+  sub_questions:
+    - What age threshold applies to a child's consent for online services?
+    - Does that threshold vary by member state?
+    - Are reasonable efforts to verify parental consent required?
+    - How must information be worded for a child?
+  missing_facts:
+    - Which member states the service is offered in
+    - Whether consent is the lawful basis at all, or contract
+  difficulty: medium
+
+- id: s009
+  scenario: >-
+    I applied for a loan online and was rejected within seconds. When I called,
+    they said the system decided and they cannot override it. I want to know
+    why I was refused.
+  perspective: subject
+  articles: [Article 22, Article 15, Article 13]
+  sub_questions:
+    - Is a fully automated rejection permitted?
+    - Is there a right to human intervention?
+    - What must be explained about the logic involved?
+  missing_facts:
+    - Whether the decision was genuinely without human involvement
+    - Whether the applicant consented or the decision was necessary for a contract
+  difficulty: medium
+
+- id: s010
+  scenario: >-
+    I sent a data request to an online shop three months ago and heard nothing.
+    I chased twice. What can I actually do about it?
+  perspective: subject
+  articles: [Article 12, Article 15, Article 77, Article 79]
+  sub_questions:
+    - What deadline applies to responding to a request?
+    - What happens when a controller simply does not reply?
+    - Where can a complaint be lodged?
+    - Is going to court an alternative?
+  missing_facts:
+    - Whether the controller acknowledged the request or extended the deadline
+  difficulty: easy
+
+- id: s011
+  scenario: >-
+    I am a freelance photographer working alone. I keep a spreadsheet of client
+    names, phone numbers and shoot dates on my laptop. Does the GDPR apply to
+    me, or is that personal use?
+  perspective: neutral
+  articles: [Article 2, Article 4, Article 6]
+  sub_questions:
+    - Does the household exemption cover a sole trader's client records?
+    - Is a freelancer a controller?
+    - What lawful basis covers keeping client contact details?
+  missing_facts:
+    - Whether the records are used for marketing as well as fulfilling bookings
+  difficulty: hard
+  note: >-
+    The case where perspective genuinely doubles — the same person is a data
+    subject elsewhere and a controller here.
+
+- id: s012
+  scenario: >-
+    Our fitness app asks users for their weight, resting heart rate and sleep
+    data. Marketing wants to share aggregate insights with an insurance partner.
+    Is that a problem?
+  perspective: organisation
+  articles: [Article 9, Article 6, Article 5, Article 7]
+  sub_questions:
+    - Does this count as data concerning health?
+    - What conditions permit processing that category?
+    - Does aggregation take it outside the regulation?
+    - Is a new purpose compatible with the original one?
+  missing_facts:
+    - Whether the aggregate output can still single out an individual
+    - What users were told when the data was collected
+  difficulty: hard
+
+- id: s013
+  scenario: >-
+    We bought a marketing list from a data broker. The contacts have never
+    heard of us. We want to email them once to introduce ourselves. Are we
+    allowed?
+  perspective: organisation
+  articles: [Article 14, Article 6, Article 21, Article 5]
+  sub_questions:
+    - What must people be told when their data was not collected from them?
+    - Is there a lawful basis for contacting them at all?
+    - Within what time must that information be provided?
+    - What must be offered regarding objection?
+  missing_facts:
+    - What the broker told the contacts when collecting their data
+    - Whether the broker had a lawful basis to share it
+  difficulty: medium
+
+- id: s014
+  scenario: >-
+    We keep every CV we have ever received, going back about eight years, in
+    case a good candidate becomes relevant later. Is that a problem, and what
+    should we have told applicants?
+  perspective: organisation
+  articles: [Article 5, Article 6, Article 13, Article 17]
+  sub_questions:
+    - How long may applicant data be retained?
+    - What lawful basis supports keeping it after the role is filled?
+    - What should applicants have been told at the point of collection?
+    - Can an applicant require deletion?
+  missing_facts:
+    - Whether applicants were told about retention and consented to it
+  difficulty: medium
+
+- id: s015
+  scenario: >-
+    Our processor had a security incident and told us about it nine days after
+    it happened. We reported to the authority immediately once we knew. Are we
+    in trouble, or is the processor?
+  perspective: organisation
+  articles: [Article 28, Article 33, Article 32]
+  sub_questions:
+    - When must a processor notify the controller?
+    - When does the controller's own clock start?
+    - What must the contract with the processor have required?
+    - Who is accountable for the delay?
+  missing_facts:
+    - What the processing agreement says about notification timing
+    - When the processor itself became aware
+  difficulty: hard
+
+- id: s016
+  scenario: >-
+    A customer emailed asking us to delete everything about him, but he used a
+    Gmail address we have never seen and would not confirm his account details.
+    Do we have to act on that?
+  perspective: organisation
+  articles: [Article 12, Article 17, Article 11]
+  sub_questions:
+    - May a controller ask for identity confirmation before acting?
+    - What may be requested, and what is excessive?
+    - What happens if identity genuinely cannot be established?
+  missing_facts:
+    - What identifiers the controller already holds for this person
+  difficulty: hard
+
+- id: s017
+  scenario: >-
+    My neighbour posted a photo of my garden on Facebook and my kids are in it.
+    I asked her to take it down and she refused. Can I make her?
+  perspective: subject
+  articles: [Article 2, Article 4, Article 17]
+  out_of_scope:
+    - National image rights and defamation law, which often decide this in practice
+  sub_questions:
+    - Does the household exemption cover personal social media posting?
+    - Is the platform a controller even if the neighbour is not?
+    - Would a right to erasure apply, and against whom?
+  missing_facts:
+    - Whether the post is public or limited to friends
+  difficulty: hard
+  note: The likely correct answer is that the GDPR mostly does not help here — worth measuring.
+
+- id: s018
+  scenario: >-
+    Our company is being acquired. The buyer wants our full customer database
+    during due diligence. Can we just hand it over?
+  perspective: organisation
+  articles: [Article 6, Article 5, Article 13, Article 14]
+  sub_questions:
+    - Is disclosure to a prospective buyer a new purpose?
+    - Which lawful basis could cover it?
+    - Must customers be told their data changed hands?
+    - Can the data be minimised or pseudonymised for this?
+  missing_facts:
+    - Whether the transaction is an asset sale or a share purchase
+    - What the original privacy notice said about disclosures
+  difficulty: hard
