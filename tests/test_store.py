@@ -113,3 +113,71 @@ class TestErrors:
         with ChunkStore() as store:
             store.add([], np.zeros((0, 8), dtype=np.float32))
             assert len(store) == 0
+
+
+class TestThreadSafety:
+    """A store is built in one thread and queried from another whenever it is
+    served — Streamlit, FastAPI, anything. sqlite3 forbids that by default,
+    which surfaced as a hard crash the first time the demo was used.
+    """
+
+    def test_search_works_from_a_different_thread_than_the_builder(self):
+        import threading
+
+        built: list[ChunkStore] = []
+        embedder = HashingEmbedder(dimensions=256)
+
+        def build():
+            store = ChunkStore()
+            store.add(CORPUS, embedder.encode([c.text for c in CORPUS]))
+            built.append(store)
+
+        builder = threading.Thread(target=build)
+        builder.start()
+        builder.join()
+
+        store = built[0]
+        # This is the call that used to raise ProgrammingError.
+        results = store.search(embedder.encode(["breach notification"]), k=1)
+        assert results[0].chunk.article == 33
+        store.close()
+
+    def test_concurrent_searches_do_not_corrupt_results(self):
+        import threading
+
+        embedder = HashingEmbedder(dimensions=512)
+        with ChunkStore() as store:
+            store.add(CORPUS, embedder.encode([c.text for c in CORPUS]))
+            found: list[int] = []
+
+            def query():
+                for _ in range(20):
+                    hit = store.search(embedder.encode(["transfers to third countries"]), k=1)
+                    found.append(hit[0].chunk.article)
+
+            threads = [threading.Thread(target=query) for _ in range(4)]
+            for thread in threads:
+                thread.start()
+            for thread in threads:
+                thread.join()
+
+            assert len(found) == 80
+            assert set(found) == {44}
+
+    def test_writes_from_multiple_threads_all_land(self):
+        import threading
+
+        embedder = HashingEmbedder(dimensions=128)
+        with ChunkStore() as store:
+
+            def writer(index: int):
+                chunk = make_chunk(index + 1, f"article text number {index}")
+                store.add([chunk], embedder.encode([chunk.text]))
+
+            threads = [threading.Thread(target=writer, args=(i,)) for i in range(10)]
+            for thread in threads:
+                thread.start()
+            for thread in threads:
+                thread.join()
+
+            assert len(store) == 10

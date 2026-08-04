@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import json
 import sqlite3
+import threading
 from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
@@ -54,7 +55,14 @@ class ChunkStore:
 
     def __init__(self, path: str | Path = ":memory:") -> None:
         self._path = str(path)
-        self._connection = sqlite3.connect(self._path)
+        # A store is built once and then queried from wherever queries arrive,
+        # which for any served application means a different thread than the
+        # one that built it. sqlite3 refuses that by default, so cross-thread
+        # use is enabled explicitly and serialised with a lock rather than
+        # left to chance. The lock is reentrant because search() holds it
+        # while _matrix() takes it again.
+        self._lock = threading.RLock()
+        self._connection = sqlite3.connect(self._path, check_same_thread=False)
         self._connection.executescript(_SCHEMA)
         self._cache: tuple[np.ndarray, list[Chunk]] | None = None
 
@@ -72,22 +80,24 @@ class ChunkStore:
             return
 
         embeddings = normalise(embeddings)
-        self._connection.executemany(
-            "INSERT INTO chunks (citation, payload, embedding) VALUES (?, ?, ?)",
-            [
-                (chunk.citation, chunk.model_dump_json(), vector.astype(np.float32).tobytes())
-                for chunk, vector in zip(chunks, embeddings, strict=True)
-            ],
-        )
-        self._connection.commit()
-        self._cache = None
+        with self._lock:
+            self._connection.executemany(
+                "INSERT INTO chunks (citation, payload, embedding) VALUES (?, ?, ?)",
+                [
+                    (chunk.citation, chunk.model_dump_json(), vector.astype(np.float32).tobytes())
+                    for chunk, vector in zip(chunks, embeddings, strict=True)
+                ],
+            )
+            self._connection.commit()
+            self._cache = None
 
     def search(self, query_embedding: np.ndarray, k: int = 5) -> list[SearchResult]:
         """Return the ``k`` most similar chunks, highest score first."""
         if k < 1:
             raise ValueError("k must be at least 1")
 
-        matrix, chunks = self._matrix()
+        with self._lock:
+            matrix, chunks = self._matrix()
         if not chunks:
             return []
 
@@ -107,22 +117,28 @@ class ChunkStore:
 
     def set_meta(self, key: str, value: str) -> None:
         """Record provenance, e.g. which embedder built this index."""
-        self._connection.execute(
-            "INSERT INTO meta (key, value) VALUES (?, ?) "
-            "ON CONFLICT(key) DO UPDATE SET value = excluded.value",
-            (key, value),
-        )
-        self._connection.commit()
+        with self._lock:
+            self._connection.execute(
+                "INSERT INTO meta (key, value) VALUES (?, ?) "
+                "ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+                (key, value),
+            )
+            self._connection.commit()
 
     def get_meta(self, key: str) -> str | None:
-        row = self._connection.execute("SELECT value FROM meta WHERE key = ?", (key,)).fetchone()
+        with self._lock:
+            row = self._connection.execute(
+                "SELECT value FROM meta WHERE key = ?", (key,)
+            ).fetchone()
         return row[0] if row else None
 
     def close(self) -> None:
-        self._connection.close()
+        with self._lock:
+            self._connection.close()
 
     def __len__(self) -> int:
-        return int(self._connection.execute("SELECT COUNT(*) FROM chunks").fetchone()[0])
+        with self._lock:
+            return int(self._connection.execute("SELECT COUNT(*) FROM chunks").fetchone()[0])
 
     def __enter__(self) -> ChunkStore:
         return self
@@ -131,6 +147,7 @@ class ChunkStore:
         self.close()
 
     def _matrix(self) -> tuple[np.ndarray, list[Chunk]]:
+        """Load and cache the embedding matrix. Caller must hold the lock."""
         if self._cache is None:
             rows = self._connection.execute(
                 "SELECT payload, embedding FROM chunks ORDER BY id"
