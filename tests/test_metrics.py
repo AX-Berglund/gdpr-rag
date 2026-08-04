@@ -2,7 +2,7 @@
 
 import pytest
 
-from gdpr_rag.evaluation.metrics import hit_rate, reciprocal_rank, to_article_ranking
+from gdpr_rag.evaluation.metrics import hit_rate, ndcg, reciprocal_rank, to_article_ranking
 
 
 class TestArticleRanking:
@@ -57,3 +57,29 @@ class TestReciprocalRank:
     def test_undefined_without_labels(self):
         with pytest.raises(ValueError, match="undefined"):
             reciprocal_rank([17], set())
+
+
+class TestNdcg:
+    def test_perfect_ranking_scores_one(self):
+        assert ndcg([17, 33, 5], {17, 33}, k=3) == pytest.approx(1.0)
+
+    def test_no_relevant_articles_scores_zero(self):
+        assert ndcg([1, 2, 3], {17}, k=3) == 0.0
+
+    def test_higher_placement_scores_better(self):
+        assert ndcg([5, 17], {17}, k=2) < ndcg([17, 5], {17}, k=2)
+
+    def test_two_of_three_beats_one_of_three(self):
+        assert ndcg([17, 33, 1], {17, 33, 44}, k=3) > ndcg([17, 1, 2], {17, 33, 44}, k=3)
+
+    def test_more_labels_than_k_is_not_penalised_for_the_impossible(self):
+        # Only two slots exist, so retrieving two correct articles is ideal.
+        assert ndcg([17, 33], {17, 33, 44}, k=2) == pytest.approx(1.0)
+
+    def test_k_below_one_is_rejected(self):
+        with pytest.raises(ValueError, match="k must be at least 1"):
+            ndcg([17], {17}, k=0)
+
+    def test_undefined_without_labels(self):
+        with pytest.raises(ValueError, match="undefined"):
+            ndcg([17], set(), k=3)

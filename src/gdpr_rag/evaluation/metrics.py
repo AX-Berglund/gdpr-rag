@@ -9,6 +9,7 @@ Article 17 are one hit at the rank of the earlier one, not two hits.
 from __future__ import annotations
 
 from collections.abc import Iterable, Sequence
+from math import log2
 
 
 def to_article_ranking(articles: Iterable[int]) -> list[int]:
@@ -45,3 +46,26 @@ def reciprocal_rank(retrieved: Sequence[int], relevant: set[int]) -> float:
         if article in relevant:
             return 1.0 / rank
     return 0.0
+
+
+def ndcg(retrieved: Sequence[int], relevant: set[int], k: int) -> float:
+    """Normalised discounted cumulative gain at ``k``, with binary relevance.
+
+    Hit rate ignores position and reciprocal rank only looks at the first hit.
+    nDCG is the one that matters for questions labelled with several articles,
+    where retrieving two of three correct articles high should beat retrieving
+    one.
+
+    The ideal ranking puts ``min(len(relevant), k)`` labelled articles first,
+    so a question with more labels than ``k`` is not penalised for the
+    impossible.
+    """
+    if k < 1:
+        raise ValueError("k must be at least 1")
+    if not relevant:
+        raise ValueError("nDCG is undefined for a question with no labelled articles")
+
+    ranking = to_article_ranking(retrieved)[:k]
+    gain = sum(1.0 / log2(rank + 1) for rank, a in enumerate(ranking, start=1) if a in relevant)
+    ideal = sum(1.0 / log2(rank + 1) for rank in range(1, min(len(relevant), k) + 1))
+    return gain / ideal
