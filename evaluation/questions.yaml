@@ -1,0 +1,369 @@
+# Labelled retrieval evaluation set for the GDPR.
+#
+# Each entry names the article(s) that genuinely answer the question. Retrieval
+# is scored on whether it surfaces them; the generator is scored on whether it
+# cites them.
+#
+# Labelling rules used here:
+#   - `articles` lists what a competent practitioner would cite, not every
+#     article that mentions a keyword. Precision in the labels matters more
+#     than coverage, because a loose label makes bad retrieval look good.
+#   - Where an obligation lives in one article and its definition in another,
+#     both are listed only if the question genuinely needs both.
+#   - `unanswerable: true` marks questions the GDPR does not address. These
+#     exist to measure refusal, not retrieval — a system that answers them
+#     confidently is worse than one that declines.
+#
+# Difficulty is a rough three-way split:
+#   easy   - the answer is in one obvious article, keyword overlap is high
+#   medium - needs the right article among several plausible neighbours
+#   hard   - low keyword overlap, or the answer spans articles
+
+- id: q001
+  question: Can I ask a company to delete the personal data it holds about me?
+  articles: [Article 17]
+  difficulty: easy
+
+- id: q002
+  question: How long does an organisation have to report a data breach to the regulator?
+  articles: [Article 33]
+  difficulty: easy
+  note: The 72-hour deadline.
+
+- id: q003
+  question: When does a data breach have to be communicated to the affected individuals themselves?
+  articles: [Article 34]
+  difficulty: medium
+  note: Distinct from Article 33; the trigger is high risk to rights and freedoms.
+
+- id: q004
+  question: What makes consent valid?
+  articles: [Article 7]
+  difficulty: easy
+
+- id: q005
+  question: Can consent be withdrawn later, and how easily?
+  articles: [Article 7]
+  difficulty: medium
+
+- id: q006
+  question: What are the lawful bases for processing personal data?
+  articles: [Article 6]
+  difficulty: easy
+
+- id: q007
+  question: Is legitimate interest a valid reason to process someone's data?
+  articles: [Article 6]
+  difficulty: medium
+
+- id: q008
+  question: What counts as personal data?
+  articles: [Article 4]
+  difficulty: easy
+
+- id: q009
+  question: What is the difference between a controller and a processor?
+  articles: [Article 4]
+  difficulty: medium
+
+- id: q010
+  question: Does the regulation apply to a company based outside the EU?
+  articles: [Article 3]
+  difficulty: medium
+  note: Territorial scope, including the targeting criterion.
+
+- id: q011
+  question: Does the GDPR cover data processed for purely personal or household activity?
+  articles: [Article 2]
+  difficulty: medium
+
+- id: q012
+  question: What rights do I have to get a copy of my own data?
+  articles: [Article 15]
+  difficulty: easy
+
+- id: q013
+  question: Can I get my data moved from one service to a competitor?
+  articles: [Article 20]
+  difficulty: easy
+
+- id: q014
+  question: Can I object to my data being used for direct marketing?
+  articles: [Article 21]
+  difficulty: medium
+
+- id: q015
+  question: What can I do if a company holds incorrect information about me?
+  articles: [Article 16]
+  difficulty: easy
+
+- id: q016
+  question: Can I ask for processing to be paused rather than deleted entirely?
+  articles: [Article 18]
+  difficulty: medium
+  note: Restriction of processing — easily confused with erasure.
+
+- id: q017
+  question: Can a decision that significantly affects me be made purely by an algorithm?
+  articles: [Article 22]
+  difficulty: medium
+
+- id: q018
+  question: What information must be given to me when data is collected directly from me?
+  articles: [Article 13]
+  difficulty: medium
+
+- id: q019
+  question: What if my data was obtained from somewhere other than me?
+  articles: [Article 14]
+  difficulty: hard
+  note: Must be distinguished from Article 13.
+
+- id: q020
+  question: How quickly must a company respond to a request to exercise my rights?
+  articles: [Article 12]
+  difficulty: medium
+  note: One month, extendable by two.
+
+- id: q021
+  question: Can a company charge me for making a data request?
+  articles: [Article 12]
+  difficulty: medium
+
+- id: q022
+  question: What are the core principles governing how data must be handled?
+  articles: [Article 5]
+  difficulty: easy
+
+- id: q023
+  question: Does data have to be deleted once the purpose it was collected for has ended?
+  articles: [Article 5]
+  difficulty: hard
+  note: Storage limitation — the principle, not the erasure right.
+
+- id: q024
+  question: Who has to prove that the rules were followed?
+  articles: [Article 5]
+  difficulty: hard
+  note: Accountability.
+
+- id: q025
+  question: What extra protection applies to health data or data about someone's religion?
+  articles: [Article 9]
+  difficulty: medium
+
+- id: q026
+  question: Can criminal conviction data be processed?
+  articles: [Article 10]
+  difficulty: medium
+
+- id: q027
+  question: At what age can a child consent to an online service on their own?
+  articles: [Article 8]
+  difficulty: medium
+
+- id: q028
+  question: Do I need a written contract with a company that processes data on my behalf?
+  articles: [Article 28]
+  difficulty: medium
+
+- id: q029
+  question: Must an organisation keep a written record of its processing activities?
+  articles: [Article 30]
+  difficulty: medium
+
+- id: q030
+  question: Is there an exemption from record-keeping for small organisations?
+  articles: [Article 30]
+  difficulty: hard
+  note: The under-250-employees carve-out and its conditions.
+
+- id: q031
+  question: What security measures are organisations required to put in place?
+  articles: [Article 32]
+  difficulty: easy
+
+- id: q032
+  question: Is encryption specifically required?
+  articles: [Article 32]
+  difficulty: medium
+  note: Named as an example, not mandated outright.
+
+- id: q033
+  question: When is a data protection impact assessment mandatory?
+  articles: [Article 35]
+  difficulty: medium
+
+- id: q034
+  question: What happens if an impact assessment shows a high risk that cannot be mitigated?
+  articles: [Article 36]
+  difficulty: hard
+  note: Prior consultation with the supervisory authority.
+
+- id: q035
+  question: When must an organisation appoint a data protection officer?
+  articles: [Article 37]
+  difficulty: medium
+
+- id: q036
+  question: Can a data protection officer be dismissed for doing their job?
+  articles: [Article 38]
+  difficulty: hard
+  note: Independence and protection from dismissal.
+
+- id: q037
+  question: What is a data protection officer actually responsible for?
+  articles: [Article 39]
+  difficulty: medium
+
+- id: q038
+  question: Must privacy be considered when a system is first designed?
+  articles: [Article 25]
+  difficulty: medium
+
+- id: q039
+  question: Should settings default to the least privacy-invasive option?
+  articles: [Article 25]
+  difficulty: hard
+  note: Data protection by default, as distinct from by design.
+
+- id: q040
+  question: When two companies decide together how data is used, who is responsible?
+  articles: [Article 26]
+  difficulty: hard
+  note: Joint controllers.
+
+- id: q041
+  question: Does a non-EU company need a representative inside the EU?
+  articles: [Article 27]
+  difficulty: hard
+
+- id: q042
+  question: Can personal data be sent to a country outside the EU?
+  articles: [Article 44]
+  difficulty: medium
+
+- id: q043
+  question: What is an adequacy decision?
+  articles: [Article 45]
+  difficulty: medium
+
+- id: q044
+  question: What safeguards allow a transfer when no adequacy decision exists?
+  articles: [Article 46]
+  difficulty: hard
+  note: Standard contractual clauses and equivalents.
+
+- id: q045
+  question: What are binding corporate rules?
+  articles: [Article 47]
+  difficulty: medium
+
+- id: q046
+  question: Can data be transferred abroad in a one-off emergency?
+  articles: [Article 49]
+  difficulty: hard
+  note: Derogations for specific situations.
+
+- id: q047
+  question: Where do I complain if I think my data rights were violated?
+  articles: [Article 77]
+  difficulty: easy
+
+- id: q048
+  question: Can I sue for damages if my data was mishandled?
+  articles: [Article 82]
+  difficulty: medium
+
+- id: q049
+  question: How large can a fine be?
+  articles: [Article 83]
+  difficulty: easy
+  note: The two tiers — 2% / 10M and 4% / 20M.
+
+- id: q050
+  question: What does a regulator take into account when deciding a fine?
+  articles: [Article 83]
+  difficulty: medium
+
+- id: q051
+  question: Can I take a company to court directly rather than going to a regulator?
+  articles: [Article 79]
+  difficulty: hard
+
+- id: q052
+  question: Can a privacy organisation file a complaint on my behalf?
+  articles: [Article 80]
+  difficulty: hard
+
+- id: q053
+  question: What powers does a supervisory authority actually have?
+  articles: [Article 58]
+  difficulty: medium
+
+- id: q054
+  question: Must supervisory authorities be independent from government?
+  articles: [Article 52]
+  difficulty: hard
+
+- id: q055
+  question: Which authority is in charge when a company operates in several member states?
+  articles: [Article 56]
+  difficulty: hard
+  note: The one-stop-shop lead authority mechanism.
+
+- id: q056
+  question: How do national regulators resolve a disagreement between themselves?
+  articles: [Article 65]
+  difficulty: hard
+  note: Dispute resolution by the Board.
+
+- id: q057
+  question: Does the regulation say anything about processing for journalism?
+  articles: [Article 85]
+  difficulty: hard
+
+- id: q058
+  question: Are there special rules for scientific research or archiving?
+  articles: [Article 89]
+  difficulty: hard
+
+- id: q059
+  question: Can employers set their own rules about employee data?
+  articles: [Article 88]
+  difficulty: hard
+
+- id: q060
+  question: Does pseudonymised data still count as personal data?
+  articles: [Article 4]
+  difficulty: hard
+  note: Turns on the definition of pseudonymisation and identifiability.
+
+# --- Refusal set: not addressed by the GDPR -------------------------------
+# A system that answers these confidently is worse than one that declines.
+
+- id: q061
+  question: What is the corporation tax rate in Ireland?
+  articles: []
+  unanswerable: true
+  difficulty: easy
+
+- id: q062
+  question: How do I configure TLS certificate pinning in nginx?
+  articles: []
+  unanswerable: true
+  difficulty: easy
+
+- id: q063
+  question: What does the California Consumer Privacy Act require for opt-out links?
+  articles: []
+  unanswerable: true
+  difficulty: medium
+  note: Adjacent privacy law — plausible enough to tempt a confident wrong answer.
+
+- id: q064
+  question: What is the maximum permitted cookie lifetime under the ePrivacy Directive?
+  articles: []
+  unanswerable: true
+  difficulty: hard
+  note: Different instrument entirely, but shares vocabulary with the GDPR.
