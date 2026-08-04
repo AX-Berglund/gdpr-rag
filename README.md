@@ -206,6 +206,45 @@ retrieval did not return is flagged as an error above the evidence.
 
 ---
 
+### Query rewriting closes the gap — and changes which retriever you need
+
+Users write in one register; the regulation is drafted in another. Two rewriting
+strategies, each measured against `NullRewriter`, which does nothing:
+
+**hit@5 on colloquial phrasing, structured chunking, by who is asking:**
+
+| retriever | rewrite | subject | organisation | neutral |
+|---|---|---|---|---|
+| lexical baseline | none | 0.250 | 0.216 | 0.000 |
+| lexical baseline | **HyDE** | **0.917** | **0.784** | 0.455 |
+| MiniLM | none | 0.417 | 0.676 | 0.545 |
+| MiniLM | **HyDE** | 0.750 | **0.784** | 0.545 |
+| MiniLM | perspective | 0.583 | 0.757 | 0.091 |
+
+**HyDE nearly closes the individual-versus-organisation gap.** It drafts a hypothetical
+passage in the regulation's own obligation-side register and embeds that, so the role-flip
+an individual's question needs happens before retrieval rather than not at all. The draft
+is frequently wrong on substance; that does not matter, because it is never shown to
+anyone and is used only to find real text.
+
+**The surprise: HyDE lifts the lexical baseline above the neural model.** Hashed unigrams
+with HyDE reach 0.917 on subject questions against MiniLM's 0.750. The reason is
+mechanical — HyDE emits the corpus's exact statutory vocabulary, which is precisely what
+word matching needs and what a colloquial question denies it. The retrieval floor becomes
+competitive once the query stops being the bottleneck.
+
+That is a real engineering choice rather than a curiosity: HyDE plus free lexical retrieval
+needs an API call per query (~1.8 s); MiniLM alone needs a 90 MB local model and no network.
+
+**Explicitly restating the perspective is worse than doing nothing** (0.583 vs 0.600
+overall). It helps individuals, costs organisations, and destroys neutral questions
+(0.545 → 0.091) by forcing an obligation framing onto definitional ones where it does not
+belong. Perspective-aware rewriting has to be conditional; applied blanket it is a net
+loss — which is exactly why it is measured rather than assumed.
+
+*Caveat: n=12 for the subject group, so 0.250 → 0.917 is three questions becoming eleven.
+The direction is unmistakable; the precision is not.*
+
 ## Seeing what happened
 
 A score of 0.306 tells you the pipeline failed. It does not tell you *which stage*
