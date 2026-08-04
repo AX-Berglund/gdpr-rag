@@ -66,8 +66,16 @@ class TestRecording:
         with trace.span("generate") as span:
             span.record(prompt="x" * 5000)
         recorded = trace.spans[0].outputs["prompt"]
-        assert len(recorded) < 400
-        assert "+4700 chars" in recorded
+        assert len(recorded) < MAX_VALUE_LENGTH + 100
+        assert "+3000 chars" in recorded
+
+    def test_a_model_answer_survives_intact(self):
+        # Truncating the thing you are debugging defeats the purpose.
+        answer = "Yes. " * 200
+        trace = Trace("q")
+        with trace.span("generate") as span:
+            span.record(completion=answer)
+        assert trace.spans[0].outputs["completion"] == answer
 
     def test_long_lists_are_truncated(self):
         trace = Trace("q")

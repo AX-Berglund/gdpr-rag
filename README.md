@@ -206,6 +206,36 @@ retrieval did not return is flagged as an error above the evidence.
 
 ---
 
+## Seeing what happened
+
+A score of 0.306 tells you the pipeline failed. It does not tell you *which stage*
+failed — and without that, a bad number is a dead end. So every stage records what it
+received and produced:
+
+```
+$ gdpr-rag ask "can my gym refuse deletion for accounting reasons?" --answer --trace
+
+query: "can my gym refuse deletion for accounting reasons?"  (2676 ms total)
+  · retrieve  20 ms
+    citations: ['Article 17(1)(e)', 'Article 17(1)(a)', 'Article 18(1)(c)', ...]
+    scores: [0.522, 0.508, 0.475, 0.454, 0.453]
+  · generate  2656 ms
+    prompt_chars: 1801
+    completion: No, the excerpts do not provide information that supports...
+  · verify_citations  0 ms
+    supported: []
+    grounded: False
+```
+
+That trace diagnoses itself. Retrieval returned Article 17 and Article 18 but never
+surfaced the exemption in Article 17(3), which is the entire answer — so the model
+correctly declined on the evidence it was given. **The failure is in retrieval, not
+generation**, and the trace is what makes that visible rather than a guess.
+
+Tracing is a data structure and a stopwatch, not a framework: no registry, no graph, no
+chaining abstraction. Every stage is a plain function taking an optional trace, and the
+library behaves identically without one.
+
 ## The evaluation set
 
 `evaluation/questions.yaml` holds 64 hand-labelled questions. Two choices shaped it:

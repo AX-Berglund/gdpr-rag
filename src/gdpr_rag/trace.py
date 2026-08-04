@@ -27,9 +27,10 @@ from contextlib import contextmanager
 from dataclasses import dataclass, field
 from typing import Any
 
-# Traces are read by humans and diffed between runs, so a span that quietly
-# embeds a 4,000-character prompt makes both useless.
-MAX_VALUE_LENGTH = 300
+# Traces are read by humans and diffed between runs, so unbounded values make
+# both useless. Generous enough that a model's answer survives intact, tight
+# enough that a trace stays a page rather than a transcript.
+MAX_VALUE_LENGTH = 2000
 
 
 def _summarise(value: Any) -> Any:
