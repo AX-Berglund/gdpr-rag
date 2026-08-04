@@ -33,6 +33,7 @@ class QuestionResult:
     hit: float
     reciprocal_rank: float
     ndcg: float
+    perspective: str = "neutral"
     retrieved: list[int] = field(default_factory=list)
 
 
@@ -64,6 +65,20 @@ class RetrievalReport:
             level: mean(r.hit for r in self.results if r.difficulty == level)
             for level in ("easy", "medium", "hard")
             if any(r.difficulty == level for r in self.results)
+        }
+
+    def by_perspective(self) -> dict[str, float]:
+        """Hit rate split by who is asking.
+
+        The regulation states obligations on controllers, so an organisation's
+        question already speaks its language while an individual's must be
+        mapped onto someone else's duty. Splitting the mean is what makes that
+        asymmetry visible instead of averaged away.
+        """
+        return {
+            group: mean(r.hit for r in self.results if r.perspective == group)
+            for group in ("subject", "organisation", "neutral")
+            if any(r.perspective == group for r in self.results)
         }
 
     def failures(self) -> list[QuestionResult]:
@@ -113,6 +128,7 @@ def evaluate_retrieval(
             QuestionResult(
                 question_id=question.id,
                 difficulty=question.difficulty,
+                perspective=question.perspective,
                 hit=hit_rate(retrieved, relevant, k),
                 reciprocal_rank=reciprocal_rank(retrieved, relevant),
                 ndcg=ndcg(retrieved, relevant, k),

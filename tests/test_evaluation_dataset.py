@@ -100,3 +100,22 @@ class TestPhrasing:
     def test_unknown_style_is_rejected(self, questions):
         with pytest.raises(ValueError, match="unknown phrasing style"):
             questions[0].phrased("shouty")
+
+
+class TestPerspective:
+    def test_every_question_is_labelled(self, questions):
+        assert all(q.perspective in {"subject", "organisation", "neutral"} for q in questions)
+
+    def test_all_three_perspectives_are_represented(self, questions):
+        assert {q.perspective for q in questions} == {"subject", "organisation", "neutral"}
+
+    def test_enough_subject_questions_to_measure(self, questions):
+        # The whole point is comparing groups; too few and the split is noise.
+        assert sum(q.perspective == "subject" for q in questions) >= 10
+
+    def test_unknown_perspective_is_rejected(self):
+        with pytest.raises(ValidationError, match="unknown perspective"):
+            Question(id="x", question="q", articles=["Article 5"], perspective="lawyer")
+
+    def test_defaults_to_neutral(self):
+        assert Question(id="x", question="q", articles=["Article 5"]).perspective == "neutral"

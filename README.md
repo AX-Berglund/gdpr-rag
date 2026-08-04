@@ -89,6 +89,39 @@ recover, and it is now a measurable target rather than a hunch. And structured c
 still beats fixed-size under the harder phrasing (0.600 against 0.500), so the main result
 holds where it matters most.
 
+### Who is asking matters more than anything else measured here
+
+Every question is also labelled with the perspective it is asked from: `subject` (the
+individual whose data it is), `organisation` (controller, processor or DPO), or `neutral`
+(definitional questions belonging to no one).
+
+| perspective | n | hit@5, structured + MiniLM |
+|---|---|---|
+| data subject | 12 | **0.333** |
+| organisation | 37 | **0.784** |
+| neutral | 11 | 0.818 |
+
+An individual's question retrieves at **less than half** the rate of an organisation's —
+a larger effect than chunking strategy or phrasing, the two variables this project set out
+to study.
+
+The cause is in how the regulation is drafted. It states obligations on controllers, and
+even the rights chapter is phrased that way: Article 17 does not say *you may delete your
+data*, it says *"The data subject shall have the right to obtain from the controller the
+erasure…"*. An organisation's question already speaks the corpus's language. An
+individual's has to be mapped onto somebody else's duty first.
+
+Sometimes perspective changes *which article is correct*, not merely the wording. A
+controller asking about breach reporting wants Article 33 (notify the authority); an
+individual asking "should they have told me?" wants Article 34 (notify the individual).
+
+Perspective is labelled rather than inferred from pronouns. Pronouns look like a free
+signal and break immediately: a sole trader is both parties at once, and a lawyer asks on
+behalf of someone else entirely.
+
+*Caveat: n=12 for the subject group, so each question moves that figure by 8 points. The
+direction is solid; the precise value is not.*
+
 ### The advantage that is not in the table
 
 A fixed-size window has no structural address. The best citation it can produce is
