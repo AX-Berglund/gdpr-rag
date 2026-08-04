@@ -16,10 +16,14 @@ from __future__ import annotations
 
 import re
 
-# "Article 82", "Article 17(1)(a)", "Articles 12 to 22", "Article 5(1)(e) GDPR"
+# "Article 82", "Article 17(1)(a)", "Articles 12 to 22", "Article 5(1)(e) GDPR".
+# EUR-Lex wraps editorial insertions in square brackets — "Article [2](h)" —
+# so the number may be bracketed. Missing that let one citation through.
+_NUMBER = r"\[?\s*\d{1,3}\s*\]?"
+_SUBDIVISION = r"(?:\s*\(\s*[a-z0-9]+\s*\))*"
 _ARTICLE = re.compile(
-    r"\bArticles?\s+\d{1,3}\s*(?:\(\s*[a-z0-9]+\s*\))*"
-    r"(?:\s*(?:,|and|to|or)\s*\d{1,3}\s*(?:\(\s*[a-z0-9]+\s*\))*)*",
+    rf"\bArticles?\s+{_NUMBER}{_SUBDIVISION}"
+    rf"(?:\s*(?:,|and|to|or)\s*{_NUMBER}{_SUBDIVISION})*",
     re.IGNORECASE,
 )
 

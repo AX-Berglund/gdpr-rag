@@ -47,3 +47,20 @@ class TestLeakScore:
 
     def test_no_labels_means_no_leak(self):
         assert leak_score("Article 82", set()) == 0.0
+
+
+class TestEditorialBrackets:
+    @pytest.mark.parametrize(
+        "text",
+        [
+            "For the purposes of Article [2](h) of Directive 95/46",
+            "under Article [82] of the GDPR",
+            "Articles [12] to [22]",
+        ],
+    )
+    def test_bracketed_numbers_are_redacted(self, text):
+        # EUR-Lex brackets editorial insertions; one citation escaped without this.
+        assert "Article" not in redact_articles(text)
+
+    def test_bracketed_citations_count_as_a_leak(self):
+        assert leak_score("under Article [82] of the GDPR", {82}) == 1.0
