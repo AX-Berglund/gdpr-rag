@@ -13,6 +13,11 @@
 #   - `unanswerable: true` marks questions the GDPR does not address. These
 #     exist to measure refusal, not retrieval — a system that answers them
 #     confidently is worse than one that declines.
+#   - `colloquial` is the same question as a real user would actually type:
+#     lowercase, unpunctuated, sometimes keywords rather than a sentence. The
+#     `question` field is well-formed English, which flatters retrieval — the
+#     pair exists so the gap between the two can be measured rather than
+#     assumed. Both phrasings share one set of labels, so they cannot drift.
 #
 # Difficulty is a rough three-way split:
 #   easy   - the answer is in one obvious article, keyword overlap is high
@@ -21,320 +26,380 @@
 
 - id: q001
   question: Can I ask a company to delete the personal data it holds about me?
+  colloquial: how do i get a company to delete my data
   articles: [Article 17]
   difficulty: easy
 
 - id: q002
   question: How long does an organisation have to report a data breach to the regulator?
+  colloquial: how fast do we need to tell the authorities about a hack
   articles: [Article 33]
   difficulty: easy
   note: The 72-hour deadline.
 
 - id: q003
   question: When does a data breach have to be communicated to the affected individuals themselves?
+  colloquial: do we have to tell customers their data leaked
   articles: [Article 34]
   difficulty: medium
   note: Distinct from Article 33; the trigger is high risk to rights and freedoms.
 
 - id: q004
   question: What makes consent valid?
+  colloquial: what counts as proper consent
   articles: [Article 7]
   difficulty: easy
 
 - id: q005
   question: Can consent be withdrawn later, and how easily?
+  colloquial: can someone take back their consent later
   articles: [Article 7]
   difficulty: medium
 
 - id: q006
   question: What are the lawful bases for processing personal data?
+  colloquial: when am i actually allowed to process personal data
   articles: [Article 6]
   difficulty: easy
 
 - id: q007
   question: Is legitimate interest a valid reason to process someone's data?
+  colloquial: is legitimate interest enough to use someones data
   articles: [Article 6]
   difficulty: medium
 
 - id: q008
   question: What counts as personal data?
+  colloquial: is an ip address personal data
   articles: [Article 4]
   difficulty: easy
 
 - id: q009
   question: What is the difference between a controller and a processor?
+  colloquial: whats the difference between a controller and a processor
   articles: [Article 4]
   difficulty: medium
 
 - id: q010
   question: Does the regulation apply to a company based outside the EU?
+  colloquial: does gdpr apply to us companies
   articles: [Article 3]
   difficulty: medium
   note: Territorial scope, including the targeting criterion.
 
 - id: q011
   question: Does the GDPR cover data processed for purely personal or household activity?
+  colloquial: does gdpr cover my personal contacts list
   articles: [Article 2]
   difficulty: medium
 
 - id: q012
   question: What rights do I have to get a copy of my own data?
+  colloquial: how do i get a copy of everything they know about me
   articles: [Article 15]
   difficulty: easy
 
 - id: q013
   question: Can I get my data moved from one service to a competitor?
+  colloquial: can i move my data to another service
   articles: [Article 20]
   difficulty: easy
 
 - id: q014
   question: Can I object to my data being used for direct marketing?
+  colloquial: how do i stop marketing emails gdpr
   articles: [Article 21]
   difficulty: medium
 
 - id: q015
   question: What can I do if a company holds incorrect information about me?
+  colloquial: they have wrong info about me how do i fix it
   articles: [Article 16]
   difficulty: easy
 
 - id: q016
   question: Can I ask for processing to be paused rather than deleted entirely?
+  colloquial: can i freeze my data instead of deleting it
   articles: [Article 18]
   difficulty: medium
   note: Restriction of processing — easily confused with erasure.
 
 - id: q017
   question: Can a decision that significantly affects me be made purely by an algorithm?
+  colloquial: can a computer decide my loan application on its own
   articles: [Article 22]
   difficulty: medium
 
 - id: q018
   question: What information must be given to me when data is collected directly from me?
+  colloquial: what do we have to tell people when we collect their data
   articles: [Article 13]
   difficulty: medium
 
 - id: q019
   question: What if my data was obtained from somewhere other than me?
+  colloquial: we bought a mailing list do we have to notify those people
   articles: [Article 14]
   difficulty: hard
   note: Must be distinguished from Article 13.
 
 - id: q020
   question: How quickly must a company respond to a request to exercise my rights?
+  colloquial: how long do we have to answer a data request
   articles: [Article 12]
   difficulty: medium
   note: One month, extendable by two.
 
 - id: q021
   question: Can a company charge me for making a data request?
+  colloquial: can we charge someone for a data request
   articles: [Article 12]
   difficulty: medium
 
 - id: q022
   question: What are the core principles governing how data must be handled?
+  colloquial: what are the main gdpr principles
   articles: [Article 5]
   difficulty: easy
 
 - id: q023
   question: Does data have to be deleted once the purpose it was collected for has ended?
+  colloquial: how long can we keep customer data for
   articles: [Article 5]
   difficulty: hard
   note: Storage limitation — the principle, not the erasure right.
 
 - id: q024
   question: Who has to prove that the rules were followed?
+  colloquial: who has to prove we followed the rules
   articles: [Article 5]
   difficulty: hard
   note: Accountability.
 
 - id: q025
   question: What extra protection applies to health data or data about someone's religion?
+  colloquial: rules for handling health data
   articles: [Article 9]
   difficulty: medium
 
 - id: q026
   question: Can criminal conviction data be processed?
+  colloquial: can we process criminal record data
   articles: [Article 10]
   difficulty: medium
 
 - id: q027
   question: At what age can a child consent to an online service on their own?
+  colloquial: what age can kids sign up without their parents
   articles: [Article 8]
   difficulty: medium
 
 - id: q028
   question: Do I need a written contract with a company that processes data on my behalf?
+  colloquial: do we need a contract with our cloud provider
   articles: [Article 28]
   difficulty: medium
 
 - id: q029
   question: Must an organisation keep a written record of its processing activities?
+  colloquial: do we need to document what data we process
   articles: [Article 30]
   difficulty: medium
 
 - id: q030
   question: Is there an exemption from record-keeping for small organisations?
+  colloquial: does a 10 person company need records of processing
   articles: [Article 30]
   difficulty: hard
   note: The under-250-employees carve-out and its conditions.
 
 - id: q031
   question: What security measures are organisations required to put in place?
+  colloquial: what security do we need for personal data
   articles: [Article 32]
   difficulty: easy
 
 - id: q032
   question: Is encryption specifically required?
+  colloquial: is encryption mandatory under gdpr
   articles: [Article 32]
   difficulty: medium
   note: Named as an example, not mandated outright.
 
 - id: q033
   question: When is a data protection impact assessment mandatory?
+  colloquial: when do we need a dpia
   articles: [Article 35]
   difficulty: medium
 
 - id: q034
   question: What happens if an impact assessment shows a high risk that cannot be mitigated?
+  colloquial: what happens if the dpia comes back high risk
   articles: [Article 36]
   difficulty: hard
   note: Prior consultation with the supervisory authority.
 
 - id: q035
   question: When must an organisation appoint a data protection officer?
+  colloquial: do we need a data protection officer
   articles: [Article 37]
   difficulty: medium
 
 - id: q036
   question: Can a data protection officer be dismissed for doing their job?
+  colloquial: can we fire our dpo
   articles: [Article 38]
   difficulty: hard
   note: Independence and protection from dismissal.
 
 - id: q037
   question: What is a data protection officer actually responsible for?
+  colloquial: what does a dpo actually do
   articles: [Article 39]
   difficulty: medium
 
 - id: q038
   question: Must privacy be considered when a system is first designed?
+  colloquial: privacy by design requirement
   articles: [Article 25]
   difficulty: medium
 
 - id: q039
   question: Should settings default to the least privacy-invasive option?
+  colloquial: should privacy settings be switched on by default
   articles: [Article 25]
   difficulty: hard
   note: Data protection by default, as distinct from by design.
 
 - id: q040
   question: When two companies decide together how data is used, who is responsible?
+  colloquial: two companies share data who is responsible
   articles: [Article 26]
   difficulty: hard
   note: Joint controllers.
 
 - id: q041
   question: Does a non-EU company need a representative inside the EU?
+  colloquial: do we need an eu representative
   articles: [Article 27]
   difficulty: hard
 
 - id: q042
   question: Can personal data be sent to a country outside the EU?
+  colloquial: can we send customer data to the us
   articles: [Article 44]
   difficulty: medium
 
 - id: q043
   question: What is an adequacy decision?
+  colloquial: what is an adequacy decision
   articles: [Article 45]
   difficulty: medium
 
 - id: q044
   question: What safeguards allow a transfer when no adequacy decision exists?
+  colloquial: what do we use if there is no adequacy decision
   articles: [Article 46]
   difficulty: hard
   note: Standard contractual clauses and equivalents.
 
 - id: q045
   question: What are binding corporate rules?
+  colloquial: what are binding corporate rules
   articles: [Article 47]
   difficulty: medium
 
 - id: q046
   question: Can data be transferred abroad in a one-off emergency?
+  colloquial: one off transfer abroad in an emergency
   articles: [Article 49]
   difficulty: hard
   note: Derogations for specific situations.
 
 - id: q047
   question: Where do I complain if I think my data rights were violated?
+  colloquial: where do i complain about a company
   articles: [Article 77]
   difficulty: easy
 
 - id: q048
   question: Can I sue for damages if my data was mishandled?
+  colloquial: can i sue for a data breach
   articles: [Article 82]
   difficulty: medium
 
 - id: q049
   question: How large can a fine be?
+  colloquial: how big can gdpr fines get
   articles: [Article 83]
   difficulty: easy
   note: The two tiers — 2% / 10M and 4% / 20M.
 
 - id: q050
   question: What does a regulator take into account when deciding a fine?
+  colloquial: what decides the size of a fine
   articles: [Article 83]
   difficulty: medium
 
 - id: q051
   question: Can I take a company to court directly rather than going to a regulator?
+  colloquial: can i take them to court directly
   articles: [Article 79]
   difficulty: hard
 
 - id: q052
   question: Can a privacy organisation file a complaint on my behalf?
+  colloquial: can an organisation complain on my behalf
   articles: [Article 80]
   difficulty: hard
 
 - id: q053
   question: What powers does a supervisory authority actually have?
+  colloquial: what can the data protection authority actually do
   articles: [Article 58]
   difficulty: medium
 
 - id: q054
   question: Must supervisory authorities be independent from government?
+  colloquial: are data protection authorities independent
   articles: [Article 52]
   difficulty: hard
 
 - id: q055
   question: Which authority is in charge when a company operates in several member states?
+  colloquial: which authority handles a company in multiple countries
   articles: [Article 56]
   difficulty: hard
   note: The one-stop-shop lead authority mechanism.
 
 - id: q056
   question: How do national regulators resolve a disagreement between themselves?
+  colloquial: what if two authorities disagree
   articles: [Article 65]
   difficulty: hard
   note: Dispute resolution by the Board.
 
 - id: q057
   question: Does the regulation say anything about processing for journalism?
+  colloquial: gdpr and journalism
   articles: [Article 85]
   difficulty: hard
 
 - id: q058
   question: Are there special rules for scientific research or archiving?
+  colloquial: gdpr exemptions for research
   articles: [Article 89]
   difficulty: hard
 
 - id: q059
   question: Can employers set their own rules about employee data?
+  colloquial: can employers make their own data rules
   articles: [Article 88]
   difficulty: hard
 
 - id: q060
   question: Does pseudonymised data still count as personal data?
+  colloquial: is pseudonymised data still personal data
   articles: [Article 4]
   difficulty: hard
   note: Turns on the definition of pseudonymisation and identifiability.
@@ -344,18 +409,21 @@
 
 - id: q061
   question: What is the corporation tax rate in Ireland?
+  colloquial: corporation tax ireland
   articles: []
   unanswerable: true
   difficulty: easy
 
 - id: q062
   question: How do I configure TLS certificate pinning in nginx?
+  colloquial: how to set up tls pinning nginx
   articles: []
   unanswerable: true
   difficulty: easy
 
 - id: q063
   question: What does the California Consumer Privacy Act require for opt-out links?
+  colloquial: ccpa opt out link requirements
   articles: []
   unanswerable: true
   difficulty: medium
@@ -363,6 +431,7 @@
 
 - id: q064
   question: What is the maximum permitted cookie lifetime under the ePrivacy Directive?
+  colloquial: how long can cookies last
   articles: []
   unanswerable: true
   difficulty: hard

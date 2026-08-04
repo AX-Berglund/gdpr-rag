@@ -51,6 +51,13 @@ def main() -> int:
     parser.add_argument("--dense", action="store_true", help="include the local MiniLM model")
     parser.add_argument("--k", type=int, nargs="+", default=[1, 5])
     parser.add_argument("--sizes", type=int, nargs="+", default=[400, 800, 1600])
+    parser.add_argument(
+        "--phrasing",
+        nargs="+",
+        default=["formal"],
+        choices=["formal", "colloquial"],
+        help="which question phrasing to score; pass both to measure the gap",
+    )
     args = parser.parse_args()
 
     html = args.html or next(iter(sorted(DATA.glob("*.html"))), None)
@@ -68,7 +75,7 @@ def main() -> int:
     print("chunks     " + ", ".join(f"{n}={len(c)}" for n, c in strategies.items()))
     print()
 
-    header = f"{'embedder':<34} {'chunking':<12} " + " ".join(
+    header = f"{'embedder':<34} {'chunking':<12} {'phrasing':<11} " + " ".join(
         f"{'hit@' + str(k):>7} {'mrr@' + str(k):>7} {'ndcg@' + str(k):>8}" for k in args.k
     )
     print(header)
@@ -79,21 +86,27 @@ def main() -> int:
         # Warm up so lazy model loading is not charged to the first strategy.
         embedder.encode(["warm-up"])
         for name, chunks in strategies.items():
-            started = time.perf_counter()
             retriever = Retriever.build(embedder, chunks)
-            cells = []
-            for k in args.k:
-                report = evaluate_retrieval(
-                    questions,
-                    lambda q, kk, r=retriever: [x.chunk.article for x in r.retrieve(q, kk)],
-                    k=k,
-                    embedder=embedder.name,
+            for phrasing in args.phrasing:
+                started = time.perf_counter()
+                cells = []
+                for k in args.k:
+                    report = evaluate_retrieval(
+                        questions,
+                        lambda q, kk, r=retriever: [x.chunk.article for x in r.retrieve(q, kk)],
+                        k=k,
+                        embedder=embedder.name,
+                        phrasing=phrasing,
+                    )
+                    cells.append(f"{report.hit_rate:>7.3f} {report.mrr:>7.3f} {report.ndcg:>8.3f}")
+                    rows.append({"chunking": name, **report.as_row()})
+                elapsed = time.perf_counter() - started
+                print(
+                    f"{embedder.name:<34} {name:<12} {phrasing:<11} "
+                    + " ".join(cells)
+                    + f"   ({elapsed:.1f}s)"
                 )
-                cells.append(f"{report.hit_rate:>7.3f} {report.mrr:>7.3f} {report.ndcg:>8.3f}")
-                rows.append({"chunking": name, **report.as_row()})
             retriever.store.close()
-            elapsed = time.perf_counter() - started
-            print(f"{embedder.name:<34} {name:<12} " + " ".join(cells) + f"   ({elapsed:.1f}s)")
 
     print(f"\nExcluded from means: {len(questions) - answerable} unanswerable questions.")
     return 0

@@ -71,3 +71,32 @@ class TestQuestion:
     def test_article_numbers_are_parsed(self):
         q = Question(id="x", question="q", articles=["Article 17", "Article 4"])
         assert q.article_numbers == {17, 4}
+
+
+class TestPhrasing:
+    def test_every_question_has_a_colloquial_variant(self, questions):
+        assert all(q.colloquial for q in questions)
+
+    def test_colloquial_variants_are_actually_different(self, questions):
+        assert all(q.colloquial != q.question for q in questions)
+
+    def test_variants_look_like_something_a_user_would_type(self, questions):
+        # Lowercase and unpunctuated is the point; a polished sentence here
+        # would measure nothing.
+        assert all(not q.colloquial.endswith("?") for q in questions)
+        assert all(q.colloquial[0].islower() for q in questions)
+
+    def test_formal_phrasing_is_the_default(self, questions):
+        assert questions[0].phrased() == questions[0].question
+
+    def test_colloquial_phrasing_is_selectable(self, questions):
+        assert questions[0].phrased("colloquial") == questions[0].colloquial
+
+    def test_missing_variant_falls_back_rather_than_dropping_the_question(self):
+        # Silently dropping one would shift the mean it contributes to.
+        bare = Question(id="x", question="Formal?", articles=["Article 5"])
+        assert bare.phrased("colloquial") == "Formal?"
+
+    def test_unknown_style_is_rejected(self, questions):
+        with pytest.raises(ValueError, match="unknown phrasing style"):
+            questions[0].phrased("shouty")
