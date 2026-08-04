@@ -28,6 +28,10 @@ class Question(BaseModel):
     difficulty: str = "medium"
     unanswerable: bool = False
     note: str | None = None
+    colloquial: str | None = Field(
+        default=None,
+        description="The same question phrased as a user would actually type it",
+    )
 
     @field_validator("articles")
     @classmethod
@@ -58,6 +62,19 @@ class Question(BaseModel):
                 "(mark it unanswerable if the GDPR genuinely does not address it)"
             )
         return self
+
+    def phrased(self, style: str = "formal") -> str:
+        """The question in the requested style.
+
+        Falls back to the formal phrasing rather than raising, so a question
+        without a colloquial variant is still scored instead of silently
+        dropping out of the set and shifting the mean.
+        """
+        if style not in {"formal", "colloquial"}:
+            raise ValueError(f"unknown phrasing style {style!r}")
+        if style == "colloquial" and self.colloquial:
+            return self.colloquial
+        return self.question
 
     @property
     def article_numbers(self) -> set[int]:

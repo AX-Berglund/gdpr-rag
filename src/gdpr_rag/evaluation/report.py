@@ -44,6 +44,7 @@ class RetrievalReport:
     k: int
     results: list[QuestionResult]
     excluded_unanswerable: int = 0
+    phrasing: str = "formal"
 
     @property
     def hit_rate(self) -> float:
@@ -78,6 +79,7 @@ class RetrievalReport:
             "mrr": round(self.mrr, 3),
             "ndcg": round(self.ndcg, 3),
             "n": len(self.results),
+            "phrasing": self.phrasing,
         }
 
     def __str__(self) -> str:
@@ -94,16 +96,18 @@ def evaluate_retrieval(
     retrieve: Retrieve,
     k: int = 5,
     embedder: str = "unknown",
+    phrasing: str = "formal",
 ) -> RetrievalReport:
     """Score ``retrieve`` over the answerable questions in ``questions``.
 
     ``retrieve`` takes a question and ``k`` and returns the article numbers it
-    found, in rank order.
+    found, in rank order. ``phrasing`` selects the well-formed question or the
+    colloquial variant a real user would type.
     """
     answerable = [q for q in questions if not q.unanswerable]
     results = []
     for question in answerable:
-        retrieved = list(retrieve(question.question, k))
+        retrieved = list(retrieve(question.phrased(phrasing), k))
         relevant = question.article_numbers
         results.append(
             QuestionResult(
@@ -120,4 +124,5 @@ def evaluate_retrieval(
         k=k,
         results=results,
         excluded_unanswerable=len(questions) - len(answerable),
+        phrasing=phrasing,
     )

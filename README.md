@@ -63,6 +63,32 @@ on small, jargon-dense corpora a lexical baseline is often competitive.
 not significant. The consistent direction across k=3, 5 and 10 and across all three
 metrics is the real evidence here — not any single cell.
 
+### How much does realistic phrasing cost?
+
+The questions above are well-formed English, which flatters retrieval. Real users type
+`how do i get a company to delete my data`, not *"Can I ask a company to delete the
+personal data it holds about me?"* Every question therefore carries a second, colloquial
+phrasing sharing the same labels, so the gap is measured rather than assumed.
+
+| | hit@1 | hit@5 | hit@10 |
+|---|---|---|---|
+| structured, formal | 0.350 | **0.700** | 0.817 |
+| structured, colloquial | 0.250 | **0.600** | 0.750 |
+| lexical baseline, formal | 0.150 | **0.383** | 0.433 |
+| lexical baseline, colloquial | 0.083 | **0.183** | 0.383 |
+
+`python scripts/run_ablation.py --dense --phrasing formal colloquial`
+
+Casual phrasing costs the dense model about **10 points of hit@5** — six questions out of
+sixty. The lexical baseline loses more than half its accuracy, which is what you would
+expect from a method that matches words: colloquial English shares far fewer exact terms
+with legal drafting than a well-formed question does.
+
+Two things follow. That 10-point gap is the headroom a query-rewriting step would try to
+recover, and it is now a measurable target rather than a hunch. And structured chunking
+still beats fixed-size under the harder phrasing (0.600 against 0.500), so the main result
+holds where it matters most.
+
 ### The advantage that is not in the table
 
 A fixed-size window has no structural address. The best citation it can produce is
