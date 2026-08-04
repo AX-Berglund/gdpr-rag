@@ -81,7 +81,10 @@ class TestReferredQuestions:
         assert "compensation" in questions[0]
 
     def test_absent_questions_give_an_empty_list(self):
-        minimal = "<p>Regulation (EU) 2016/679 &#8211; Article 5 was considered.</p>"
+        minimal = (
+            "<p>JUDGMENT OF THE COURT (Fifth Chamber) 1 January 2024</p>"
+            "<p>Regulation (EU) 2016/679 &#8211; Article 5 was considered.</p>"
+        )
         assert extract("x", minimal).questions == []
 
 
@@ -91,3 +94,20 @@ class TestTextFlattening:
 
     def test_whitespace_is_collapsed(self):
         assert to_text("<p>a\n\n   b</p>") == "a b"
+
+
+class TestTransportFailures:
+    def test_a_script_shell_is_reported_as_a_fetch_failure(self):
+        # EUR-Lex sometimes serves a JS shell; blaming the Court for a network
+        # problem would hide a retryable error behind a content verdict.
+        from gdpr_rag.cases.extract import NotAJudgment, looks_like_a_decision
+
+        shell = "<script>function p(x,y){}</script>EUR-Lex - CELEX:62023CO0312 - EN"
+        assert not looks_like_a_decision(to_text(shell))
+        with pytest.raises(NotAJudgment, match="no decision text"):
+            extract("62023CO0312", shell)
+
+    def test_orders_are_accepted_as_decisions(self):
+        from gdpr_rag.cases.extract import looks_like_a_decision
+
+        assert looks_like_a_decision("ORDER OF THE COURT (Eighth Chamber)")

@@ -86,6 +86,15 @@ class NotAGdprCase(ValueError):
     """The judgment does not concern Regulation (EU) 2016/679."""
 
 
+class NotAJudgment(ValueError):
+    """The page holds no judgment text at all.
+
+    EUR-Lex occasionally serves a script shell instead of the document. That is
+    a transport failure, and reporting it as "not a GDPR case" would blame the
+    Court for a network problem.
+    """
+
+
 @dataclass
 class CaseExtract:
     """What could be read out of one judgment."""
@@ -112,6 +121,12 @@ def to_text(raw_html: str) -> str:
     """Flatten judgment HTML to plain text."""
     without_tags = re.sub(r"<[^>]+>", " ", raw_html)
     return re.sub(r"\s+", " ", html.unescape(without_tags)).strip()
+
+
+def looks_like_a_decision(text: str) -> bool:
+    """Whether the page actually contains a judgment or order."""
+    upper = text.upper()
+    return any(m in upper for m in ("JUDGMENT OF THE COURT", "ORDER OF THE COURT"))
 
 
 def is_gdpr_case(text: str) -> bool:
@@ -146,6 +161,8 @@ def extract(celex: str, raw_html: str, *, min_mentions: int = 5) -> CaseExtract:
     the common outcome when a case list is assembled by guessing identifiers.
     """
     text = to_text(raw_html)
+    if not looks_like_a_decision(text):
+        raise NotAJudgment(f"{celex} returned no decision text ({len(text)} chars)")
     if not is_gdpr_case(text):
         raise NotAGdprCase(f"{celex} does not cite Regulation (EU) 2016/679")
     result = CaseExtract(celex=celex)

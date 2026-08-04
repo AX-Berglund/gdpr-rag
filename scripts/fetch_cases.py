@@ -7,9 +7,15 @@ Judgments are not vendored — they land in a gitignored directory and the repo
 keeps only the manifest, which is small, auditable and free of licensing
 questions.
 
-    python scripts/fetch_cases.py evaluation/case_list.txt
+    python scripts/fetch_cases.py --discover      # ask the EU triplestore
+    python scripts/fetch_cases.py cases.txt       # or read a hand-made list
 
-The list may hold either form, one per line, and `#` starts a comment:
+Discovery uses the Publications Office SPARQL endpoint, which records which
+judgments interpret which legal act. That is the Court's own answer to "is this
+a GDPR case", so the case list is externally determined rather than assembled
+by whoever happened to remember some case numbers.
+
+A hand-made list may hold either form, one per line, with `#` for comments:
 
     C-300/21
     62021CJ0300
@@ -27,7 +33,20 @@ from pathlib import Path
 
 import yaml
 
-from gdpr_rag.cases.extract import NotAGdprCase, extract
+from gdpr_rag.cases.extract import NotAGdprCase, NotAJudgment, extract
+
+SPARQL = "https://publications.europa.eu/webapi/rdf/sparql"
+
+# cdm:case-law_interpretes_resource_legal is the Publications Office's own
+# record of which judgments interpret which act.
+DISCOVERY_QUERY = """
+PREFIX cdm: <http://publications.europa.eu/ontology/cdm#>
+SELECT DISTINCT ?celex WHERE {
+  ?act cdm:resource_legal_id_celex ?id . FILTER(STR(?id) = "32016R0679")
+  ?case cdm:case-law_interpretes_resource_legal ?act .
+  ?case cdm:resource_legal_id_celex ?celex .
+} ORDER BY ?celex
+"""
 
 ROOT = Path(__file__).resolve().parents[1]
 RAW = ROOT / "data" / "raw" / "cases"
@@ -53,6 +72,20 @@ def to_celex(reference: str) -> str:
     # current decade would be last century — but GDPR cases are all post-2018.
     full_year = 2000 + int(year) if int(year) < 90 else 1900 + int(year)
     return f"6{full_year}{court.upper()}J{int(number):04d}"
+
+
+def discover() -> list[str]:
+    """Ask the EU triplestore which judgments interpret the GDPR."""
+    import json
+    import urllib.parse
+
+    query = urllib.parse.urlencode(
+        {"query": DISCOVERY_QUERY, "format": "application/sparql-results+json"}
+    )
+    request = urllib.request.Request(f"{SPARQL}?{query}", headers={"User-Agent": "gdpr-rag"})
+    with urllib.request.urlopen(request, timeout=180) as response:
+        payload = json.load(response)
+    return [b["celex"]["value"] for b in payload["results"]["bindings"]]
 
 
 def read_list(path: Path) -> list[str]:
@@ -81,16 +114,24 @@ def download(celex: str, *, force: bool = False) -> str:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("list", type=Path, help="file of case references, one per line")
+    parser.add_argument("list", type=Path, nargs="?", help="file of case references, one per line")
+    parser.add_argument(
+        "--discover", action="store_true", help="ask the EU triplestore for the case list"
+    )
     parser.add_argument("--out", type=Path, default=MANIFEST)
     parser.add_argument("--force", action="store_true", help="re-download cached judgments")
     args = parser.parse_args()
 
-    if not args.list.exists():
-        print(f"No case list at {args.list}. See the README.", file=sys.stderr)
+    if args.discover:
+        print("Asking the EU triplestore which judgments interpret the GDPR...")
+        entries = discover()
+    elif args.list and args.list.exists():
+        entries = read_list(args.list)
+    else:
+        print("Pass --discover, or a case list file. See the README.", file=sys.stderr)
         return 1
 
-    entries, records, skipped = read_list(args.list), [], []
+    records, skipped = [], []
     print(f"{len(entries)} references\n")
 
     for reference in entries:
@@ -110,6 +151,11 @@ def main() -> int:
 
         try:
             found = extract(celex, raw)
+        except NotAJudgment as exc:
+            # Transport problem, not a content one — worth retrying later.
+            skipped.append((reference, str(exc)))
+            print(f"  {reference:<14} FAIL  no decision text (retry with --force)")
+            continue
         except NotAGdprCase as exc:
             # Expected and useful: a list assembled by hand will contain cases
             # that turned out not to be about the GDPR at all.
@@ -140,11 +186,16 @@ def main() -> int:
         encoding="utf-8",
     )
 
+    # A case can legitimately have no substantive articles: some concern only
+    # the supervisory authority's competence or tasks, which are procedural.
     unlabelled = [r["id"] for r in records if not r["articles"]]
     print(f"\n{len(records)} cases -> {args.out.relative_to(ROOT)}")
     print(f"{len(skipped)} skipped")
     if unlabelled:
-        print(f"{len(unlabelled)} with no articles found, needing review: {unlabelled}")
+        print(
+            f"{len(unlabelled)} with no substantive articles (procedural cases, "
+            f"excluded from evaluation): {unlabelled}"
+        )
     return 0
 
 
