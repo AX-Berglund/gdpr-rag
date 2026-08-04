@@ -1,0 +1,54 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "gdpr-rag"
+version = "0.1.0"
+description = "Retrieval-augmented QA over the GDPR with cited articles and measured retrieval quality"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "Axel Berglund" }]
+keywords = ["rag", "retrieval", "gdpr", "nlp", "embeddings"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+dependencies = [
+    "numpy>=1.24",
+    "pydantic>=2.0",
+]
+
+[project.optional-dependencies]
+# Default runtime: local embeddings, no API key and no cloud database required.
+local = [
+    "sentence-transformers>=3.0",
+    "torch>=2.2",
+]
+# Optional hosted backends.
+openai = ["openai>=1.0"]
+pdf = ["pdfminer.six>=20231228"]
+dev = [
+    "pytest>=8.0",
+    "pytest-cov>=5.0",
+    "ruff>=0.6",
+]
+
+[project.scripts]
+gdpr-rag = "gdpr_rag.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/gdpr_rag"]
+
+[tool.ruff]
+line-length = 100
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
