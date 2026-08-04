@@ -115,11 +115,30 @@ python scripts/validate_corpus.py
 # 774 chunks across 99 articles — PASS
 ```
 
+**Ask it something:**
+
+```bash
+gdpr-rag index                                  # build an index
+gdpr-rag ask "Can I ask a company to delete my data?"
+```
+
 **Run the experiment:**
 
 ```bash
 python scripts/run_ablation.py --dense --k 1 3 5 10
 ```
+
+**Or use the demo:**
+
+```bash
+pip install -e ".[local,demo]"
+streamlit run demo/app.py
+```
+
+The chunking strategy is a control in the sidebar, so you can ask one question and
+watch structured and fixed-size retrieval disagree — the table above, made touchable.
+Retrieval needs no API key; set `OPENAI_API_KEY` to also generate a cited answer, with
+any unsupported citation flagged against the evidence shown beneath it.
 
 ---
 
