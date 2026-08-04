@@ -32,6 +32,10 @@ class Question(BaseModel):
         default=None,
         description="The same question phrased as a user would actually type it",
     )
+    perspective: str = Field(
+        default="neutral",
+        description="Who is asking: subject, organisation, or neutral",
+    )
 
     @field_validator("articles")
     @classmethod
@@ -44,6 +48,13 @@ class Question(BaseModel):
                     "returns the right article at a different paragraph."
                 )
         return articles
+
+    @field_validator("perspective")
+    @classmethod
+    def _perspective_is_known(cls, perspective: str) -> str:
+        if perspective not in {"subject", "organisation", "neutral"}:
+            raise ValueError(f"unknown perspective {perspective!r}")
+        return perspective
 
     @field_validator("difficulty")
     @classmethod

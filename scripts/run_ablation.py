@@ -82,6 +82,7 @@ def main() -> int:
     print("-" * len(header))
 
     rows = []
+    perspective_reports = {}
     for embedder in build_embedders(args.dense):
         # Warm up so lazy model loading is not charged to the first strategy.
         embedder.encode(["warm-up"])
@@ -100,6 +101,8 @@ def main() -> int:
                     )
                     cells.append(f"{report.hit_rate:>7.3f} {report.mrr:>7.3f} {report.ndcg:>8.3f}")
                     rows.append({"chunking": name, **report.as_row()})
+                    if name == "structured" and k == 5:
+                        perspective_reports[f"{embedder.name} / {phrasing}"] = report
                 elapsed = time.perf_counter() - started
                 print(
                     f"{embedder.name:<34} {name:<12} {phrasing:<11} "
@@ -109,6 +112,20 @@ def main() -> int:
             retriever.store.close()
 
     print(f"\nExcluded from means: {len(questions) - answerable} unanswerable questions.")
+
+    # The headline mean hides the asymmetry that matters most: the regulation
+    # is written as obligations on controllers, so questions asked from the
+    # individual's side start further from the corpus register.
+    if perspective_reports:
+        print("\nhit@5 by who is asking (structured chunking):")
+        for label, report in perspective_reports.items():
+            split = ", ".join(f"{g} {v:.3f}" for g, v in report.by_perspective().items())
+            counts = {
+                g: sum(r.perspective == g for r in report.results)
+                for g in ("subject", "organisation", "neutral")
+            }
+            print(f"  {label:<48} {split}")
+        print("  n = " + ", ".join(f"{g} {c}" for g, c in counts.items()))
     return 0
 
 

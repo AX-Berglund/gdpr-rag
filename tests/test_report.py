@@ -75,3 +75,23 @@ class TestEdgeCases:
         # Retrieval hands back a long list; only the top k may count.
         report = evaluate_retrieval([QUESTIONS[0]], lambda q, k: [1, 2, 3, 17][:k], k=2)
         assert report.hit_rate == 0.0
+
+
+class TestPerspectiveBreakdown:
+    def test_hit_rate_is_split_by_who_is_asking(self):
+        questions = [
+            Question(id="s", question="mine", articles=["Article 17"], perspective="subject"),
+            Question(id="o", question="ours", articles=["Article 33"], perspective="organisation"),
+        ]
+        report = evaluate_retrieval(questions, fixed({"mine": [1], "ours": [33]}), k=3)
+        breakdown = report.by_perspective()
+        assert breakdown["subject"] == 0.0
+        assert breakdown["organisation"] == 1.0
+
+    def test_absent_perspectives_are_omitted_not_zeroed(self):
+        # Reporting 0.0 for a group with no questions would read as a failure.
+        questions = [
+            Question(id="o", question="ours", articles=["Article 33"], perspective="organisation")
+        ]
+        report = evaluate_retrieval(questions, fixed({"ours": [33]}), k=3)
+        assert "subject" not in report.by_perspective()
