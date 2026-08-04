@@ -1,5 +1,9 @@
 # gdpr-rag
 
+[![CI](https://github.com/AX-Berglund/gdpr-rag/actions/workflows/ci.yml/badge.svg)](https://github.com/AX-Berglund/gdpr-rag/actions/workflows/ci.yml)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue)](https://www.python.org/)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+
 Retrieval-augmented question answering over the GDPR, where answers cite the articles they
 came from — and where the retrieval is **measured** rather than assumed.
 
