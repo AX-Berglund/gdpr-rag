@@ -24,6 +24,7 @@ from gdpr_rag.evaluation import load_questions
 from gdpr_rag.generate import answer_question
 from gdpr_rag.ingest import fixed_size_chunks, parse_document
 from gdpr_rag.retrieve import Retriever
+from gdpr_rag.trace import Trace
 
 CORPUS_DIR = Path(__file__).resolve().parents[1] / "data" / "raw"
 
@@ -115,13 +116,14 @@ def main() -> None:
     if not question.strip():
         st.stop()
 
-    results = retriever.retrieve(question, k=k)
+    trace = Trace(question)
+    results = retriever.retrieve(question, k=k, trace=trace)
 
     if generate:
         from gdpr_rag.llm import OpenAIModel
 
         with st.spinner("Generating..."):
-            answer = answer_question(question, results, OpenAIModel())
+            answer = answer_question(question, results, OpenAIModel(), trace=trace)
         st.subheader("Answer")
         st.write(answer.text)
         if answer.unsupported_citations:
@@ -149,6 +151,13 @@ def main() -> None:
             left.markdown(f"**{chunk.citation}**{title}")
             right.metric("similarity", f"{result.score:.3f}", label_visibility="collapsed")
             st.write(chunk.text)
+
+    with st.expander("What happened (trace)"):
+        st.caption(
+            "Every stage records what it received and produced. When an answer is wrong, "
+            "this is what tells you which stage was responsible."
+        )
+        st.code(trace.summary(), language="text")
 
     if strategy != "structured":
         st.info(

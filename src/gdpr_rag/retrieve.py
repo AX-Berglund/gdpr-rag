@@ -6,6 +6,7 @@ from dataclasses import dataclass
 
 from gdpr_rag.embed.base import Embedder
 from gdpr_rag.store.sqlite_store import ChunkStore, SearchResult
+from gdpr_rag.trace import Trace
 
 
 @dataclass(frozen=True)
@@ -19,11 +20,25 @@ class Retriever:
     embedder: Embedder
     store: ChunkStore
 
-    def retrieve(self, question: str, k: int = 5) -> list[SearchResult]:
-        """Return the ``k`` chunks most similar to ``question``."""
+    def retrieve(self, question: str, k: int = 5, trace: Trace | None = None) -> list[SearchResult]:
+        """Return the ``k`` chunks most similar to ``question``.
+
+        Passing a ``trace`` records the query, what came back and how long it
+        took. Omitting it changes nothing.
+        """
         if not question.strip():
             raise ValueError("question must not be empty")
-        return self.store.search(self.embedder.encode([question]), k=k)
+
+        if trace is None:
+            return self.store.search(self.embedder.encode([question]), k=k)
+
+        with trace.span("retrieve", question=question, k=k, embedder=self.embedder.name) as span:
+            results = self.store.search(self.embedder.encode([question]), k=k)
+            span.record(
+                citations=[r.chunk.citation for r in results],
+                scores=[round(r.score, 3) for r in results],
+            )
+            return results
 
     @classmethod
     def build(

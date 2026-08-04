@@ -16,6 +16,7 @@ from gdpr_rag.generate import answer_question
 from gdpr_rag.ingest import parse_document
 from gdpr_rag.retrieve import Retriever
 from gdpr_rag.store import ChunkStore
+from gdpr_rag.trace import Trace
 
 DEFAULT_INDEX = Path("data/index.sqlite")
 
@@ -56,13 +57,16 @@ def cmd_ask(args: argparse.Namespace) -> int:
         return 1
 
     store = ChunkStore(args.index)
-    embedder = _embedder(store.get_meta("embedder") and args.embedder or args.embedder)
-    results = Retriever(embedder=embedder, store=store).retrieve(args.question, k=args.k)
+    embedder = _embedder(args.embedder)
+    trace = Trace(args.question) if args.trace else None
+    results = Retriever(embedder=embedder, store=store).retrieve(
+        args.question, k=args.k, trace=trace
+    )
 
     if args.answer:
         from gdpr_rag.llm import OpenAIModel
 
-        answer = answer_question(args.question, results, OpenAIModel())
+        answer = answer_question(args.question, results, OpenAIModel(), trace=trace)
         print(answer.text)
         print()
         if answer.unsupported_citations:
@@ -75,6 +79,9 @@ def cmd_ask(args: argparse.Namespace) -> int:
         title = f" — {result.chunk.title}" if result.chunk.title else ""
         print(f"[{result.score:.3f}] {result.chunk.citation}{title}")
         print(f"        {result.chunk.text[:160]}\n")
+
+    if trace is not None:
+        print(trace.summary() if not args.trace_json else trace.to_json())
     store.close()
     return 0
 
@@ -97,6 +104,8 @@ def main(argv: list[str] | None = None) -> int:
     ask.add_argument("question")
     ask.add_argument("-k", type=int, default=5)
     ask.add_argument("--answer", action="store_true", help="also generate a cited answer")
+    ask.add_argument("--trace", action="store_true", help="show what each stage did")
+    ask.add_argument("--trace-json", action="store_true", help="emit the trace as JSON")
     ask.set_defaults(func=cmd_ask)
 
     load_env()

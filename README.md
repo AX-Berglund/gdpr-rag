@@ -206,6 +206,75 @@ retrieval did not return is flagged as an error above the evidence.
 
 ---
 
+### Query rewriting closes the gap — and changes which retriever you need
+
+Users write in one register; the regulation is drafted in another. Two rewriting
+strategies, each measured against `NullRewriter`, which does nothing:
+
+**hit@5 on colloquial phrasing, structured chunking, by who is asking:**
+
+| retriever | rewrite | subject | organisation | neutral |
+|---|---|---|---|---|
+| lexical baseline | none | 0.250 | 0.216 | 0.000 |
+| lexical baseline | **HyDE** | **0.917** | **0.784** | 0.455 |
+| MiniLM | none | 0.417 | 0.676 | 0.545 |
+| MiniLM | **HyDE** | 0.750 | **0.784** | 0.545 |
+| MiniLM | perspective | 0.583 | 0.757 | 0.091 |
+
+**HyDE nearly closes the individual-versus-organisation gap.** It drafts a hypothetical
+passage in the regulation's own obligation-side register and embeds that, so the role-flip
+an individual's question needs happens before retrieval rather than not at all. The draft
+is frequently wrong on substance; that does not matter, because it is never shown to
+anyone and is used only to find real text.
+
+**The surprise: HyDE lifts the lexical baseline above the neural model.** Hashed unigrams
+with HyDE reach 0.917 on subject questions against MiniLM's 0.750. The reason is
+mechanical — HyDE emits the corpus's exact statutory vocabulary, which is precisely what
+word matching needs and what a colloquial question denies it. The retrieval floor becomes
+competitive once the query stops being the bottleneck.
+
+That is a real engineering choice rather than a curiosity: HyDE plus free lexical retrieval
+needs an API call per query (~1.8 s); MiniLM alone needs a 90 MB local model and no network.
+
+**Explicitly restating the perspective is worse than doing nothing** (0.583 vs 0.600
+overall). It helps individuals, costs organisations, and destroys neutral questions
+(0.545 → 0.091) by forcing an obligation framing onto definitional ones where it does not
+belong. Perspective-aware rewriting has to be conditional; applied blanket it is a net
+loss — which is exactly why it is measured rather than assumed.
+
+*Caveat: n=12 for the subject group, so 0.250 → 0.917 is three questions becoming eleven.
+The direction is unmistakable; the precision is not.*
+
+## Seeing what happened
+
+A score of 0.306 tells you the pipeline failed. It does not tell you *which stage*
+failed — and without that, a bad number is a dead end. So every stage records what it
+received and produced:
+
+```
+$ gdpr-rag ask "can my gym refuse deletion for accounting reasons?" --answer --trace
+
+query: "can my gym refuse deletion for accounting reasons?"  (2676 ms total)
+  · retrieve  20 ms
+    citations: ['Article 17(1)(e)', 'Article 17(1)(a)', 'Article 18(1)(c)', ...]
+    scores: [0.522, 0.508, 0.475, 0.454, 0.453]
+  · generate  2656 ms
+    prompt_chars: 1801
+    completion: No, the excerpts do not provide information that supports...
+  · verify_citations  0 ms
+    supported: []
+    grounded: False
+```
+
+That trace diagnoses itself. Retrieval returned Article 17 and Article 18 but never
+surfaced the exemption in Article 17(3), which is the entire answer — so the model
+correctly declined on the evidence it was given. **The failure is in retrieval, not
+generation**, and the trace is what makes that visible rather than a guess.
+
+Tracing is a data structure and a stopwatch, not a framework: no registry, no graph, no
+chaining abstraction. Every stage is a plain function taking an optional trace, and the
+library behaves identically without one.
+
 ## The evaluation set
 
 `evaluation/questions.yaml` holds 64 hand-labelled questions. Two choices shaped it:

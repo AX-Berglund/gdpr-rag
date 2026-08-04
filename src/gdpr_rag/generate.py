@@ -16,6 +16,7 @@ from typing import Protocol, runtime_checkable
 from pydantic import BaseModel, Field
 
 from gdpr_rag.store.sqlite_store import SearchResult
+from gdpr_rag.trace import Trace
 
 # Matches "Article 17", "Article 17(1)", "Article 17(1)(a)", "Article 4(7)".
 _CITATION = re.compile(r"Article\s+\d+(?:\(\w+\))*")
@@ -104,8 +105,14 @@ def answer_question(
     question: str,
     results: Sequence[SearchResult],
     model: LanguageModel,
+    trace: Trace | None = None,
 ) -> Answer:
-    """Generate an answer from retrieved chunks and verify its citations."""
+    """Generate an answer from retrieved chunks and verify its citations.
+
+    Passing a ``trace`` records the prompt, the raw completion and the
+    grounding verdict — which is what makes a wrong answer diagnosable rather
+    than merely wrong.
+    """
     if not question.strip():
         raise ValueError("question must not be empty")
 
@@ -119,16 +126,32 @@ def answer_question(
             retrieved=[],
         )
 
-    text = model.complete(
-        PROMPT_TEMPLATE.format(context=format_context(results), question=question)
-    )
+    prompt = PROMPT_TEMPLATE.format(context=format_context(results), question=question)
+    if trace is None:
+        text = model.complete(prompt)
+    else:
+        with trace.span("generate", model=model.name, evidence=retrieved) as span:
+            text = model.complete(prompt)
+            # The prompt is the template (static, in source) wrapped around the
+            # chunks already listed in `evidence`, so recording its text would
+            # copy the corpus into every trace to say nothing new. Its size is
+            # the part that varies and matters.
+            span.record(prompt_chars=len(prompt), completion=text)
 
     retrieved_set = set(retrieved)
     cited = extract_citations(text)
-    return Answer(
+    answer = Answer(
         question=question,
         text=text,
         citations=[c for c in cited if _supports(c, retrieved_set)],
         unsupported_citations=[c for c in cited if not _supports(c, retrieved_set)],
         retrieved=retrieved,
     )
+    if trace is not None:
+        with trace.span("verify_citations", cited=cited) as span:
+            span.record(
+                supported=answer.citations,
+                unsupported=answer.unsupported_citations,
+                grounded=answer.is_grounded,
+            )
+    return answer

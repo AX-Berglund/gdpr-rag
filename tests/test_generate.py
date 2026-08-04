@@ -139,3 +139,39 @@ class TestAnswerModel:
 
     def test_defaults_are_empty(self):
         assert Answer(question="q", text="t").citations == []
+
+
+class TestTracing:
+    def test_generation_without_a_trace_is_unchanged(self):
+        answer = answer_question("q", RESULTS, ScriptedModel("Article 17(1)"))
+        assert answer.citations == ["Article 17(1)"]
+
+    def test_a_trace_records_the_prompt_and_completion(self):
+        from gdpr_rag.trace import Trace
+
+        trace = Trace("q")
+        answer_question("q", RESULTS, ScriptedModel("See Article 17(1)."), trace=trace)
+        span = trace.find("generate")[0]
+        assert span.inputs["model"] == "scripted"
+        assert "Article 17(1)" in span.outputs["completion"]
+        # The evidence identifies what was shown; the prompt text would just
+        # copy the corpus into the trace.
+        assert span.inputs["evidence"] == ["Article 17(1)", "Article 17(1)(a)"]
+        assert span.outputs["prompt_chars"] > 100
+
+    def test_the_grounding_verdict_is_traced(self):
+        from gdpr_rag.trace import Trace
+
+        trace = Trace("q")
+        answer_question("q", RESULTS, ScriptedModel("See Article 99(2)."), trace=trace)
+        span = trace.find("verify_citations")[0]
+        assert span.outputs["unsupported"] == ["Article 99(2)"]
+        assert span.outputs["grounded"] is False
+
+    def test_a_refusal_records_no_generate_span(self):
+        from gdpr_rag.trace import Trace
+
+        # The model is never called, so a generate span would be a lie.
+        trace = Trace("q")
+        answer_question("q", [], ScriptedModel("unused"), trace=trace)
+        assert trace.find("generate") == []
