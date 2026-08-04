@@ -137,8 +137,9 @@ streamlit run demo/app.py
 
 The chunking strategy is a control in the sidebar, so you can ask one question and
 watch structured and fixed-size retrieval disagree — the table above, made touchable.
-Retrieval needs no API key; set `OPENAI_API_KEY` to also generate a cited answer, with
-any unsupported citation flagged against the evidence shown beneath it.
+Retrieval needs no API key. To also generate a cited answer, copy `.env.example` to `.env`
+and add an `OPENAI_API_KEY` — `.env` is gitignored. Any citation the model produces that
+retrieval did not return is flagged as an error above the evidence.
 
 ---
 

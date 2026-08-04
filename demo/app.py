@@ -18,6 +18,7 @@ from pathlib import Path
 
 import streamlit as st
 
+from gdpr_rag.config import load_env
 from gdpr_rag.embed import HashingEmbedder
 from gdpr_rag.evaluation import load_questions
 from gdpr_rag.generate import answer_question
@@ -59,6 +60,7 @@ def find_corpus() -> Path | None:
 
 
 def main() -> None:
+    load_env()
     st.set_page_config(page_title="gdpr-rag", page_icon="§", layout="wide")
     st.title("§ gdpr-rag")
     st.caption(

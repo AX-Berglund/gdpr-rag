@@ -10,6 +10,7 @@ import argparse
 import sys
 from pathlib import Path
 
+from gdpr_rag.config import load_env
 from gdpr_rag.embed import HashingEmbedder
 from gdpr_rag.generate import answer_question
 from gdpr_rag.ingest import parse_document
@@ -98,6 +99,7 @@ def main(argv: list[str] | None = None) -> int:
     ask.add_argument("--answer", action="store_true", help="also generate a cited answer")
     ask.set_defaults(func=cmd_ask)
 
+    load_env()
     args = parser.parse_args(argv)
     return int(args.func(args))
 

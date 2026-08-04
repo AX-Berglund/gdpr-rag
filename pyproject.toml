@@ -30,7 +30,7 @@ local = [
     "torch>=2.2",
 ]
 # Optional hosted backends.
-openai = ["openai>=1.0"]
+openai = ["openai>=1.0", "python-dotenv>=1.0"]
 demo = ["streamlit>=1.38"]
 pdf = ["pdfminer.six>=20231228"]
 dev = [
