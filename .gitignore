@@ -15,3 +15,6 @@ data/processed/
 *.db
 
 data/raw/cases/
+.coverage
+coverage.xml
+htmlcov/
