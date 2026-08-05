@@ -27,6 +27,10 @@ The core runs entirely locally — no API key, no cloud database, no account. Qu
 rewriting and answer generation are opt-in and need a key; retrieval, indexing and the
 whole evaluation do not.
 
+**[Try it](https://huggingface.co/spaces/AX-Berglund/gdpr-rag)** — the chunking strategy
+is a control, so the central result is reproducible in the browser rather than only
+reported.
+
 ---
 
 ## Results
