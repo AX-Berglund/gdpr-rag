@@ -4,7 +4,8 @@
 A self-contained copy of the retrieval demo: the app, its dependencies, and the corpus
 bundled beside it, so it runs on any host that can serve a Streamlit app or a container.
 
-Deployed on [Streamlit Community Cloud](https://share.streamlit.io) from `deploy/app.py`.
+Deployed on [Streamlit Community Cloud](https://share.streamlit.io) from `deploy/app.py`
+— though `demo/app.py` also finds this corpus, so either entry point works.
 The `Dockerfile` makes the same app runnable on any container host.
 
 Retrieval over the General Data Protection Regulation with **article-level citations** —

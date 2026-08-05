@@ -26,7 +26,13 @@ from gdpr_rag.ingest import fixed_size_chunks, parse_document
 from gdpr_rag.retrieve import Retriever
 from gdpr_rag.trace import Trace
 
-CORPUS_DIR = Path(__file__).resolve().parents[1] / "data" / "raw"
+ROOT = Path(__file__).resolve().parents[1]
+
+# Locally the corpus is a manual download in data/raw; a deployment carries a
+# bundled copy beside deploy/app.py. Searching both means it does not matter
+# which entry point a host is pointed at — deploying the wrong one used to
+# produce a confident "no corpus found" instead of simply working.
+CORPUS_DIRS = (ROOT / "data" / "raw", ROOT / "deploy" / "corpus")
 
 STRATEGIES = {
     "Structured (article / paragraph / point)": "structured",
@@ -57,7 +63,11 @@ def build_retriever(path: str, strategy: str, embedder_name: str):
 
 
 def find_corpus() -> Path | None:
-    return next(iter(sorted(CORPUS_DIR.glob("*.html"))), None)
+    for directory in CORPUS_DIRS:
+        found = next(iter(sorted(directory.glob("*.html"))), None)
+        if found is not None:
+            return found
+    return None
 
 
 def main() -> None:
@@ -72,8 +82,9 @@ def main() -> None:
     corpus = find_corpus()
     if corpus is None:
         st.error(
-            f"No corpus found in `{CORPUS_DIR}`. Save the EUR-Lex HTML there "
-            "(see the README) and reload."
+            "No corpus found. Looked in "
+            + " and ".join(f"`{d}`" for d in CORPUS_DIRS)
+            + ". Save the EUR-Lex HTML into one of them (see the README) and reload."
         )
         st.stop()
 
