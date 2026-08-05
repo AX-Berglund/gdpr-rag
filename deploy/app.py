@@ -1,12 +1,13 @@
-"""Hugging Face Space entry point.
+"""The deployable demo.
 
 Retrieval only. Answer generation needs an API key, and a key in a public
-Space is a key someone else is spending — retrieval is the part this project
-measures anyway, so nothing of substance is missing.
+deployment is a key someone else is spending — retrieval is the part this
+project measures anyway, so nothing of substance is missing.
 
-The corpus is bundled here rather than downloaded. EUR-Lex sits behind a bot
-challenge, so a Space cannot fetch it at build time. EU legislation is freely
-reusable under Decision 2011/833/EU with attribution, which the README gives.
+The corpus is bundled beside the app rather than downloaded. EUR-Lex sits
+behind a bot challenge, so no host can fetch it at build time. EU legislation
+is freely reusable under Decision 2011/833/EU with attribution, which the
+README gives.
 """
 
 from __future__ import annotations
