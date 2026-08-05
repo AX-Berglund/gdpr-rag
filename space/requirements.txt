@@ -1,0 +1,4 @@
+# The Space installs the package from the public repository, so it always
+# tracks main rather than carrying a second copy of the source that can drift.
+gdpr-rag[local] @ git+https://github.com/AX-Berglund/gdpr-rag.git@main
+streamlit>=1.38
