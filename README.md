@@ -5,13 +5,27 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
 Retrieval-augmented question answering over the GDPR, where answers cite the articles they
-came from — and where the retrieval is **measured** rather than assumed.
+came from — and where every design decision is **measured** rather than asserted.
 
-Most RAG projects stop at "it returns something plausible." This one asks a narrower
-question and answers it with numbers: *does parsing a document's real structure retrieve
-better than sliding a fixed-size window over it?*
+Most RAG projects stop at "it returns something plausible". This one is built around the
+question of how you would know. It ships three evaluation sets, and the hardest of them is
+labelled by the **Court of Justice** rather than by its author: 70 judgments whose article
+labels come from the Court's own headnotes, whose queries are the referring courts'
+questions, and whose membership is decided by the EU Publications Office triplestore.
 
-Runs entirely locally. No API key, no cloud database, no account.
+Several results contradicted the assumption that prompted them, and are reported anyway:
+
+- structured chunking beats fixed-size windows — except at k=1, and except under a lexical
+  retriever, where the ordering reverses entirely
+- HyDE query rewriting takes individuals' questions from 0.250 to 0.917, and lifts a
+  hashed-unigram baseline *above* a neural embedding model
+- explicitly restating a question's perspective makes retrieval worse overall, despite
+  helping the group it targets
+- real judgments score 0.268 coverage where hand-written questions score 0.700
+
+The core runs entirely locally — no API key, no cloud database, no account. Query
+rewriting and answer generation are opt-in and need a key; retrieval, indexing and the
+whole evaluation do not.
 
 ---
 
@@ -132,80 +146,6 @@ reader can check and one they have to go hunting through.
 
 ---
 
-## How it works
-
-```
-EUR-Lex HTML ─▶ structure-aware parse ─▶ embed ─▶ SQLite + cosine ─▶ retrieve ─▶ cited answer
-                        │                                                            │
-                        └── article / paragraph / point preserved ───────────────────┘
-```
-
-**Ingest.** The Official Journal HTML marks structure explicitly — an article is
-`<div id="art_17">`, its paragraphs are `<div id="017.001">` — so headers are *read*
-rather than told apart from the hundreds of "Article 6(1)" cross-references in the prose.
-The PDF of the same regulation carries the same text but not the same information: page
-furniture bleeds into the body at every page break (30 polluted chunks against 0) and
-justified typesetting leaves 514 mid-sentence line breaks. Both sources are parsed and
-cross-checked against each other; disagreement about which articles exist means a parser
-is wrong.
-
-**Retrieval.** Brute-force exact cosine over roughly a thousand chunks — sub-millisecond,
-and it always returns the true top-k. An approximate index would add a tuning surface and,
-worse, put index recall into the measurements as a confound.
-
-**Generation.** Citations are checked, not trusted. Asking a model to cite its sources
-makes citations *appear*; it does not make them true. Every citation the model emits is
-verified against what retrieval actually returned, and invented ones are surfaced rather
-than silently kept. Specificity is directional: having retrieved `Article 17(1)(a)`
-supports citing `Article 17`, but having retrieved only `Article 15` does not support a
-claim about `Article 15(3)`. When retrieval returns nothing, the model is never called at
-all — an unanswerable question should not come back as a fluent guess.
-
----
-
-## Quickstart
-
-```bash
-pip install -e ".[local,dev]"
-```
-
-**Get the corpus.** EUR-Lex sits behind a bot challenge, so this one step is manual:
-open [the regulation on EUR-Lex](https://eur-lex.europa.eu/legal-content/EN/TXT/HTML/?uri=CELEX:32016R0679),
-save the page as **HTML only** into `data/raw/`, then check it parsed:
-
-```bash
-python scripts/validate_corpus.py
-# 774 chunks across 99 articles — PASS
-```
-
-**Ask it something:**
-
-```bash
-gdpr-rag index                                  # build an index
-gdpr-rag ask "Can I ask a company to delete my data?"
-```
-
-**Run the experiment:**
-
-```bash
-python scripts/run_ablation.py --dense --k 1 3 5 10
-```
-
-**Or use the demo:**
-
-```bash
-pip install -e ".[local,demo]"
-streamlit run demo/app.py
-```
-
-The chunking strategy is a control in the sidebar, so you can ask one question and
-watch structured and fixed-size retrieval disagree — the table above, made touchable.
-Retrieval needs no API key. To also generate a cited answer, copy `.env.example` to `.env`
-and add an `OPENAI_API_KEY` — `.env` is gitignored. Any citation the model produces that
-retrieval did not return is flagged as an error above the evidence.
-
----
-
 ### Query rewriting closes the gap — and changes which retriever you need
 
 Users write in one register; the regulation is drafted in another. Two rewriting
@@ -245,7 +185,38 @@ loss — which is exactly why it is measured rather than assumed.
 *Caveat: n=12 for the subject group, so 0.250 → 0.917 is three questions becoming eleven.
 The direction is unmistakable; the precision is not.*
 
-## Seeing what happened
+## How it works
+
+```
+EUR-Lex HTML ─▶ structure-aware parse ─▶ embed ─▶ SQLite + cosine ─▶ retrieve ─▶ cited answer
+                        │                                                            │
+                        └── article / paragraph / point preserved ───────────────────┘
+```
+
+**Ingest.** The Official Journal HTML marks structure explicitly — an article is
+`<div id="art_17">`, its paragraphs are `<div id="017.001">` — so headers are *read*
+rather than told apart from the hundreds of "Article 6(1)" cross-references in the prose.
+The PDF of the same regulation carries the same text but not the same information: page
+furniture bleeds into the body at every page break (30 polluted chunks against 0) and
+justified typesetting leaves 514 mid-sentence line breaks. Both sources are parsed and
+cross-checked against each other; disagreement about which articles exist means a parser
+is wrong.
+
+**Retrieval.** Brute-force exact cosine over roughly a thousand chunks — sub-millisecond,
+and it always returns the true top-k. An approximate index would add a tuning surface and,
+worse, put index recall into the measurements as a confound.
+
+**Generation.** Citations are checked, not trusted. Asking a model to cite its sources
+makes citations *appear*; it does not make them true. Every citation the model emits is
+verified against what retrieval actually returned, and invented ones are surfaced rather
+than silently kept. Specificity is directional: having retrieved `Article 17(1)(a)`
+supports citing `Article 17`, but having retrieved only `Article 15` does not support a
+claim about `Article 15(3)`. When retrieval returns nothing, the model is never called at
+all — an unanswerable question should not come back as a fluent guess.
+
+---
+
+### Seeing what happened
 
 A score of 0.306 tells you the pipeline failed. It does not tell you *which stage*
 failed — and without that, a bad number is a dead end. So every stage records what it
@@ -275,7 +246,7 @@ Tracing is a data structure and a stopwatch, not a framework: no registry, no gr
 chaining abstraction. Every stage is a plain function taking an optional trace, and the
 library behaves identically without one.
 
-## Three evaluation sets, reported separately
+## Evaluation
 
 They measure different things, so a combined number would mean nothing.
 `python scripts/evaluate.py --dense`:
@@ -323,7 +294,7 @@ which is why redaction stays on.
 answer may be recalled rather than retrieved. That contamination is unfixable
 for older cases and is stated rather than worked around.
 
-## The evaluation set
+### How the hand-written set was built
 
 `evaluation/questions.yaml` holds 64 hand-labelled questions. Two choices shaped it:
 
@@ -338,6 +309,49 @@ cookie lifetimes. Those are exactly what a RAG system answers confidently and wr
 nothing measures that unless the set contains them. They are excluded from retrieval means,
 and the exclusion count is printed with every result: a mean over an unstated subset is how
 misleading numbers get published.
+
+---
+
+## Quickstart
+
+```bash
+pip install -e ".[local,dev]"
+```
+
+**Get the corpus.** EUR-Lex sits behind a bot challenge, so this one step is manual:
+open [the regulation on EUR-Lex](https://eur-lex.europa.eu/legal-content/EN/TXT/HTML/?uri=CELEX:32016R0679),
+save the page as **HTML only** into `data/raw/`, then check it parsed:
+
+```bash
+python scripts/validate_corpus.py
+# 774 chunks across 99 articles — PASS
+```
+
+**Ask it something:**
+
+```bash
+gdpr-rag index                                  # build an index
+gdpr-rag ask "Can I ask a company to delete my data?"
+```
+
+**Run the experiment:**
+
+```bash
+python scripts/run_ablation.py --dense --k 1 3 5 10
+```
+
+**Or use the demo:**
+
+```bash
+pip install -e ".[local,demo]"
+streamlit run demo/app.py
+```
+
+The chunking strategy is a control in the sidebar, so you can ask one question and
+watch structured and fixed-size retrieval disagree — the table above, made touchable.
+Retrieval needs no API key. To also generate a cited answer, copy `.env.example` to `.env`
+and add an `OPENAI_API_KEY` — `.env` is gitignored. Any citation the model produces that
+retrieval did not return is flagged as an error above the evidence.
 
 ---
 
