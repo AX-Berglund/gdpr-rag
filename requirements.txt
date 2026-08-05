@@ -1,0 +1,10 @@
+# For hosts that install from requirements.txt (Streamlit Community Cloud).
+# Development uses the pyproject extras; this reuses them so dependency
+# versions keep a single source of truth.
+#
+# CPU-only torch: the default wheel bundles CUDA libraries that are useless on
+# a CPU host and large enough to exhaust a free tier's disk.
+--extra-index-url https://download.pytorch.org/whl/cpu
+
+.[local]
+streamlit>=1.38

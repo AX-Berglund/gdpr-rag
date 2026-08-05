@@ -53,13 +53,32 @@ def build_retriever(path: str, strategy: str, embedder_name: str):
         size = int(strategy.split("-")[1])
         chunks = fixed_size_chunks(chunks, size=size, overlap=size // 8)
 
-    if embedder_name == "hashing":
-        embedder = HashingEmbedder(dimensions=2048)
-    else:
+    embedder = _embedder(embedder_name)
+    return Retriever.build(embedder, chunks), len(chunks)
+
+
+def _embedder(name: str):
+    """Resolve the embedder, degrading rather than crashing.
+
+    A host that installed the package without the 'local' extra should still
+    serve a working demo. Falling back to the lexical baseline is a visibly
+    worse experience, which is better than a traceback and is announced rather
+    than hidden.
+    """
+    if name == "hashing":
+        return HashingEmbedder(dimensions=2048)
+    try:
         from gdpr_rag.embed import SentenceTransformerEmbedder
 
         embedder = SentenceTransformerEmbedder()
-    return Retriever.build(embedder, chunks), len(chunks)
+        embedder.encode(["warm-up"])
+        return embedder
+    except Exception as exc:
+        st.warning(
+            "The local embedding model is unavailable here, so this is running on the "
+            f"hashed-unigram baseline — noticeably worse. ({type(exc).__name__})"
+        )
+        return HashingEmbedder(dimensions=2048)
 
 
 def find_corpus() -> Path | None:

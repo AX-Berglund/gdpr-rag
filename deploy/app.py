@@ -48,8 +48,23 @@ def build(strategy: str, dense: bool):
     if strategy.startswith("fixed-"):
         size = int(strategy.split("-")[1])
         chunks = fixed_size_chunks(chunks, size=size, overlap=size // 8)
-    embedder = SentenceTransformerEmbedder() if dense else HashingEmbedder(dimensions=2048)
-    return Retriever.build(embedder, chunks), len(chunks)
+    return Retriever.build(_embedder(dense), chunks), len(chunks)
+
+
+def _embedder(dense: bool):
+    """Resolve the embedder, degrading rather than crashing if it is absent."""
+    if not dense:
+        return HashingEmbedder(dimensions=2048)
+    try:
+        embedder = SentenceTransformerEmbedder()
+        embedder.encode(["warm-up"])
+        return embedder
+    except Exception as exc:
+        st.warning(
+            "The local embedding model is unavailable here, so this is running on the "
+            f"hashed-unigram baseline — noticeably worse. ({type(exc).__name__})"
+        )
+        return HashingEmbedder(dimensions=2048)
 
 
 def main() -> None:
