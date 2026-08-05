@@ -1,15 +1,11 @@
----
-title: gdpr-rag
-emoji: "§"
-colorFrom: indigo
-colorTo: gray
-sdk: docker
-app_port: 7860
-pinned: false
-license: mit
----
 
-# gdpr-rag
+# gdpr-rag — deployable demo
+
+A self-contained copy of the retrieval demo: the app, its dependencies, and the corpus
+bundled beside it, so it runs on any host that can serve a Streamlit app or a container.
+
+Deployed on [Streamlit Community Cloud](https://share.streamlit.io) from `deploy/app.py`.
+The `Dockerfile` makes the same app runnable on any container host.
 
 Retrieval over the General Data Protection Regulation with **article-level citations** —
 `Article 17(1)(a)`, not just "Article 17".

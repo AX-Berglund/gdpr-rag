@@ -1,6 +1,6 @@
-# Hugging Face deprecated Streamlit as a Space SDK — only gradio, docker and
-# static are accepted now. Docker keeps the app that was already written and
-# tested rather than maintaining a second UI in another framework.
+# Runs the demo on any container host. Streamlit Community Cloud does not need
+# this — it installs requirements.txt directly — but a container keeps the
+# deployment portable rather than tied to one provider.
 FROM python:3.11-slim
 
 # A non-root user with a writable home: Streamlit and Hugging Face both want
