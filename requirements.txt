@@ -1,10 +1,18 @@
 # For hosts that install from requirements.txt (Streamlit Community Cloud).
-# Development uses the pyproject extras; this reuses them so dependency
-# versions keep a single source of truth.
+#
+# Dependencies are listed explicitly rather than as ".[local]". A local-path
+# install depends on pip running from the repository root, which a managed host
+# does not guarantee — and when it silently does not resolve, the app installs
+# without the embedding model and quietly serves the weak lexical baseline.
 #
 # CPU-only torch: the default wheel bundles CUDA libraries that are useless on
 # a CPU host and large enough to exhaust a free tier's disk.
 --extra-index-url https://download.pytorch.org/whl/cpu
 
-.[local]
+numpy>=1.24
+pydantic>=2.0
+pyyaml>=6.0
+lxml>=5.0
+torch>=2.2
+sentence-transformers>=3.0
 streamlit>=1.38
