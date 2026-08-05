@@ -13,3 +13,5 @@ data/raw/
 data/processed/
 *.sqlite
 *.db
+
+data/raw/cases/

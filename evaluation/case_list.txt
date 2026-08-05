@@ -1,0 +1,6 @@
+# GDPR cases before the Court of Justice.
+# One reference per line, either form: C-300/21 or 62021CJ0300
+
+C-300/21
+C-154/21
+C-645/20   # deliberately not a GDPR case, to show it is caught

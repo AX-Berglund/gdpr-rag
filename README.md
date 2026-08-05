@@ -275,6 +275,54 @@ Tracing is a data structure and a stopwatch, not a framework: no registry, no gr
 chaining abstraction. Every stage is a plain function taking an optional trace, and the
 library behaves identically without one.
 
+## Three evaluation sets, reported separately
+
+They measure different things, so a combined number would mean nothing.
+`python scripts/evaluate.py --dense`:
+
+| set | n | labelled by | what it measures | hit/coverage @5 |
+|---|---|---|---|---|
+| questions | 64 | hand | one-article lookups | **0.700** hit |
+| scenarios | 18 | hand | multi-article narratives | **0.306** coverage |
+| **cases** | 70 | **the Court** | real judgments | **0.268** coverage |
+
+**The real-case set is the one that matters most**, because its labels are not
+mine. They come from the Court's own headnote, which names the provisions at
+issue, and the queries are the referring court's own questions. Both sides are
+external. The case list itself is discovered from the EU Publications Office
+triplestore — `cdm:case-law_interpretes_resource_legal` — so even the choice of
+which cases count is not an authoring decision.
+
+It is also by far the hardest, and that is not a defect. These cases reached the
+Court precisely because the law was unclear, so 0.268 coverage is an honest
+reading of a genuinely hard task rather than a flattering one. At k=10 the
+system surfaces a correct article for 60% of judgments but everything a judgment
+needs for only 13%.
+
+### The leak, measured rather than assumed
+
+A referring court's question routinely names the provision it asks about — 52%
+of this set gives away at least one of its own answers, 32% of labels overall.
+Queries are therefore redacted. Running both ways puts a number on it:
+
+| | coverage @10 |
+|---|---|
+| redacted queries | 0.323 |
+| raw queries | 0.354 |
+
+Only three points, and it moves in both directions across *k*. The reason is
+architectural: this pipeline keeps article numbers as chunk **metadata**, not as
+embedded text, so citing "Article 82" gives the embedding nothing to match. The
+structured chunking decision immunised retrieval against a leak it was never
+designed for. Generation is a different matter — it reads the citation directly,
+which is why redaction stays on.
+
+### What is not fixed
+
+`gpt-4o-mini` was trained on text that includes these judgments, so a generated
+answer may be recalled rather than retrieved. That contamination is unfixable
+for older cases and is stated rather than worked around.
+
 ## The evaluation set
 
 `evaluation/questions.yaml` holds 64 hand-labelled questions. Two choices shaped it:
