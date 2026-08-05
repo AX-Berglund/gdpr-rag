@@ -7,10 +7,15 @@ while looking fine, which is the failure mode worth a test.
 """
 
 import re
+import sys
 from pathlib import Path
 
 import pytest
-import tomllib
+
+if sys.version_info >= (3, 11):
+    import tomllib
+else:  # pragma: no cover - 3.10 only
+    import tomli as tomllib
 
 ROOT = Path(__file__).resolve().parents[1]
 MANIFESTS = [ROOT / "requirements.txt", ROOT / "deploy" / "requirements.txt"]
