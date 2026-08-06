@@ -14,7 +14,9 @@ from pathlib import Path
 import yaml
 from pydantic import BaseModel, Field, field_validator, model_validator
 
-DEFAULT_QUESTIONS = Path(__file__).resolve().parents[3] / "evaluation" / "questions.yaml"
+from gdpr_rag.evaluation._paths import evaluation_file
+
+DEFAULT_QUESTIONS = evaluation_file("questions.yaml")
 
 _ARTICLE_LABEL = re.compile(r"^Article \d+$")
 

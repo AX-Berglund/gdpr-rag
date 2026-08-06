@@ -16,7 +16,9 @@ from pathlib import Path
 import yaml
 from pydantic import BaseModel, Field, field_validator
 
-DEFAULT_SCENARIOS = Path(__file__).resolve().parents[3] / "evaluation" / "scenarios.yaml"
+from gdpr_rag.evaluation._paths import evaluation_file
+
+DEFAULT_SCENARIOS = evaluation_file("scenarios.yaml")
 
 _ARTICLE_LABEL = re.compile(r"^Article \d+$")
 
