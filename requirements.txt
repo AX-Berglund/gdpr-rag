@@ -26,3 +26,8 @@
 torch>=2.2
 sentence-transformers>=3.0
 streamlit>=1.38
+
+# The demo offers answer generation when a key is configured, so the client it
+# would call has to be present. Named outright for the same reason as the
+# embedding stack above: it lives in an extra, and a plain install skips extras.
+openai>=1.0

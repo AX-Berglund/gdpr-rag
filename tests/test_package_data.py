@@ -7,6 +7,7 @@ how the deployed demo failed, and would equally break anyone who pip-installed
 the package and tried to reproduce the results.
 """
 
+import importlib.util
 import zipfile
 from pathlib import Path
 
@@ -42,6 +43,27 @@ class TestWheelPackaging:
             assert f"gdpr_rag/_data/{name}" in names
 
 
+def demo_namespace(monkeypatch):
+    """Everything demo/app.py defines above main(), with streamlit stubbed."""
+    import sys
+    import types
+
+    stub = types.ModuleType("streamlit")
+
+    def cache_resource(*args, **kwargs):
+        # Used both bare (@st.cache_resource) and called (@st.cache_resource(...)).
+        return args[0] if args and callable(args[0]) else (lambda f: f)
+
+    stub.cache_resource = cache_resource
+    stub.secrets = {}
+    monkeypatch.setitem(sys.modules, "streamlit", stub)
+
+    namespace = {"__file__": str(ROOT / "demo" / "app.py")}
+    source = (ROOT / "demo" / "app.py").read_text().split("def main()")[0]
+    exec(compile(source, "demo/app.py", "exec"), namespace)
+    return namespace
+
+
 class TestDemoResilience:
     """The demo must not die over decoration.
 
@@ -51,28 +73,32 @@ class TestDemoResilience:
     """
 
     def test_examples_fall_back_when_the_set_is_unreadable(self, monkeypatch):
-        import sys
-        import types
-
-        stub = types.ModuleType("streamlit")
-
-        def cache_resource(*args, **kwargs):
-            # Used both bare (@st.cache_resource) and called (@st.cache_resource(...)).
-            return args[0] if args and callable(args[0]) else (lambda f: f)
-
-        stub.cache_resource = cache_resource
-        stub.secrets = {}
-        monkeypatch.setitem(sys.modules, "streamlit", stub)
-
-        namespace = {"__file__": str(ROOT / "demo" / "app.py")}
-        source = (ROOT / "demo" / "app.py").read_text().split("def main()")[0]
-        exec(compile(source, "demo/app.py", "exec"), namespace)
+        namespace = demo_namespace(monkeypatch)
 
         def boom():
             raise FileNotFoundError("no evaluation set")
 
         namespace["load_questions"] = boom
-        assert namespace["_examples"] == namespace["_examples"]
         examples = namespace["_examples"]()
         assert examples == namespace["FALLBACK_EXAMPLES"]
         assert all(e.endswith("?") for e in examples)
+
+
+class TestGenerationOffer:
+    """Generation is offered on capability, not just on configuration.
+
+    The client lives in an optional extra, so an environment can hold a valid
+    key and still have no way to spend it. The deployed demo did exactly that:
+    it enabled the toggle because a key was present, and raised ImportError the
+    moment somebody used it.
+    """
+
+    def test_absent_client_means_generation_is_not_available(self, monkeypatch):
+        namespace = demo_namespace(monkeypatch)
+        monkeypatch.setattr(importlib.util, "find_spec", lambda name: None)
+        assert namespace["_generation_available"]() is False
+
+    def test_present_client_means_generation_is_available(self, monkeypatch):
+        namespace = demo_namespace(monkeypatch)
+        monkeypatch.setattr(importlib.util, "find_spec", lambda name: object())
+        assert namespace["_generation_available"]() is True
