@@ -26,9 +26,10 @@ import yaml
 from pydantic import BaseModel, Field
 
 from gdpr_rag.cases.redact import leak_score, redact
+from gdpr_rag.evaluation._paths import evaluation_file
 from gdpr_rag.evaluation.scenarios import coverage
 
-DEFAULT_CASES = Path(__file__).resolve().parents[3] / "evaluation" / "cases.yaml"
+DEFAULT_CASES = evaluation_file("cases.yaml")
 
 
 class Case(BaseModel):
