@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "gdpr-rag"
-version = "0.1.0"
+version = "0.2.0"
 description = "Retrieval-augmented QA over the GDPR with cited articles and measured retrieval quality"
 readme = "README.md"
 requires-python = ">=3.10"

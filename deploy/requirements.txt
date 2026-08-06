@@ -2,7 +2,7 @@
 # The path is relative to the repository root, where the host runs pip.
 --extra-index-url https://download.pytorch.org/whl/cpu
 
-.
+-e .
 torch>=2.2
 sentence-transformers>=3.0
 streamlit>=1.38
