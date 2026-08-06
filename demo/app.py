@@ -81,6 +81,26 @@ def _embedder(name: str):
         return HashingEmbedder(dimensions=2048)
 
 
+# Shown when the labelled set is unavailable. Example text is decoration; a
+# demo that dies because it cannot read one is trading a working page for a
+# cosmetic detail.
+FALLBACK_EXAMPLES = [
+    "Can I ask a company to delete the personal data it holds about me?",
+    "How long does an organisation have to report a data breach?",
+    "Can a decision that significantly affects me be made purely by an algorithm?",
+    "What extra protection applies to health data?",
+]
+
+
+def _examples() -> list[str]:
+    """Example questions, preferring the labelled set but never requiring it."""
+    try:
+        found = [q.question for q in load_questions() if not q.unanswerable][:6]
+    except Exception:
+        return FALLBACK_EXAMPLES
+    return found or FALLBACK_EXAMPLES
+
+
 def find_corpus() -> Path | None:
     for directory in CORPUS_DIRS:
         found = next(iter(sorted(directory.glob("*.html"))), None)
@@ -137,7 +157,7 @@ def main() -> None:
     retriever, chunk_count = build_retriever(str(corpus), strategy, "local" if dense else "hashing")
     st.sidebar.metric("Chunks in index", chunk_count)
 
-    examples = [q.question for q in load_questions() if not q.unanswerable][:6]
+    examples = _examples()
     question = st.text_input(
         "Ask about the GDPR", placeholder=examples[0] if examples else "Can I ask for my data?"
     )

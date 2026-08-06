@@ -40,3 +40,33 @@ class TestWheelPackaging:
         names = zipfile.ZipFile(wheel).namelist()
         for name in SETS:
             assert f"gdpr_rag/_data/{name}" in names
+
+
+class TestDemoResilience:
+    """The demo must not die over decoration.
+
+    Example questions come from the labelled set when it is available. When it
+    is not — an install missing its package data, say — the page should still
+    work, because examples are a nicety and retrieval is the point.
+    """
+
+    def test_examples_fall_back_when_the_set_is_unreadable(self, monkeypatch):
+        import sys
+        import types
+
+        stub = types.ModuleType("streamlit")
+        stub.cache_resource = lambda **kw: lambda f: f
+        monkeypatch.setitem(sys.modules, "streamlit", stub)
+
+        namespace = {"__file__": str(ROOT / "demo" / "app.py")}
+        source = (ROOT / "demo" / "app.py").read_text().split("def main()")[0]
+        exec(compile(source, "demo/app.py", "exec"), namespace)
+
+        def boom():
+            raise FileNotFoundError("no evaluation set")
+
+        namespace["load_questions"] = boom
+        assert namespace["_examples"] == namespace["_examples"]
+        examples = namespace["_examples"]()
+        assert examples == namespace["FALLBACK_EXAMPLES"]
+        assert all(e.endswith("?") for e in examples)
