@@ -55,7 +55,13 @@ class TestDemoResilience:
         import types
 
         stub = types.ModuleType("streamlit")
-        stub.cache_resource = lambda **kw: lambda f: f
+
+        def cache_resource(*args, **kwargs):
+            # Used both bare (@st.cache_resource) and called (@st.cache_resource(...)).
+            return args[0] if args and callable(args[0]) else (lambda f: f)
+
+        stub.cache_resource = cache_resource
+        stub.secrets = {}
         monkeypatch.setitem(sys.modules, "streamlit", stub)
 
         namespace = {"__file__": str(ROOT / "demo" / "app.py")}
