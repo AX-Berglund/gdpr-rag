@@ -5,6 +5,18 @@ that reads badly -- it is the model citing an article it was never shown.
 Asking for citations in the prompt makes them appear; it does not make them
 true. So every citation the model emits is verified against what retrieval
 actually returned, and the ones that are not are reported rather than hidden.
+
+Verification alone turned out not to be enough. Shown Article 13(3) and asked
+to cite it, a model paraphrased it correctly and wrote "Article 3(3)" -- one
+digit dropped, and 3(3) is a real article about territorial scope, so the
+result was a plausible citation attached to the wrong provision. It was caught,
+but only after the fact.
+
+So the model is asked to cite by excerpt number instead: it writes ``[2]`` and
+the article citation is substituted in afterwards from what retrieval returned.
+A number it was handed cannot be misspelt into a different article, which makes
+the common failure impossible rather than merely detectable. Article numbers
+written out anyway are still checked, because instructions are not guarantees.
 """
 
 from __future__ import annotations
@@ -21,12 +33,20 @@ from gdpr_rag.trace import Trace
 # Matches "Article 17", "Article 17(1)", "Article 17(1)(a)", "Article 4(7)".
 _CITATION = re.compile(r"Article\s+\d+(?:\(\w+\))*")
 
+# Matches the "[2]" markers the model is asked to cite with, absorbing a
+# preceding "excerpt"/"excerpts" so that "see excerpts [3] and [4]" resolves to
+# "see Article 13(3) and Article 14(4)" rather than leaving the word stranded
+# in front of a citation that no longer needs it.
+_EXCERPT = re.compile(r"(?:\bexcerpts?\s+)?(\[(\d+)\])", re.IGNORECASE)
+
 PROMPT_TEMPLATE = """You are answering questions about the General Data Protection \
 Regulation (GDPR). Use only the numbered excerpts below. If they do not contain the \
 answer, say so plainly rather than drawing on outside knowledge.
 
-Cite the article after each claim, in the form "Article 17(1)(a)". Cite only articles \
-that appear in the excerpts.
+Cite by excerpt number in square brackets, like [2], immediately after the claim it \
+supports. Do not write article numbers yourself: the excerpt number is replaced with \
+the correct article citation afterwards, so [2] cites excerpt 2 accurately and writing \
+the number out risks getting it wrong.
 
 Excerpts:
 {context}
@@ -90,6 +110,34 @@ def extract_citations(text: str) -> list[str]:
     return list(seen)
 
 
+def resolve_excerpts(
+    text: str, results: Sequence[SearchResult]
+) -> tuple[str, list[str], list[str]]:
+    """Substitute ``[n]`` markers with the citation of the n-th excerpt.
+
+    Returns the rewritten text, the citations resolved in first-seen order, and
+    any markers pointing outside the evidence. An out-of-range marker is left
+    in place rather than quietly dropped: the claim beside it rests on nothing,
+    and the reader should see that.
+    """
+    citations = [r.chunk.citation for r in results]
+    resolved: dict[str, None] = {}
+    invalid: dict[str, None] = {}
+
+    def substitute(match: re.Match[str]) -> str:
+        index = int(match.group(2))
+        if 1 <= index <= len(citations):
+            citation = citations[index - 1]
+            resolved.setdefault(citation, None)
+            return citation
+        # Out of range: leave the text exactly as written, and report the
+        # marker itself rather than whatever prose happened to precede it.
+        invalid.setdefault(match.group(1), None)
+        return match.group(0)
+
+    return _EXCERPT.sub(substitute, text), list(resolved), list(invalid)
+
+
 def _supports(citation: str, retrieved: set[str]) -> bool:
     """Whether ``citation`` is backed by a retrieved chunk.
 
@@ -139,19 +187,33 @@ def answer_question(
             span.record(prompt_chars=len(prompt), completion=text)
 
     retrieved_set = set(retrieved)
-    cited = extract_citations(text)
+    rendered, resolved, invalid = resolve_excerpts(text, results)
+
+    # Article numbers the model wrote out despite being asked not to. These are
+    # the ones that can be wrong, so they are still checked against retrieval —
+    # read from the raw completion, since substitution has by now put correct
+    # citations into the rendered text.
+    written = extract_citations(text)
+    supported = [c for c in written if _supports(c, retrieved_set)]
+
+    citations = list(dict.fromkeys(resolved + supported))
+    unsupported = [c for c in written if not _supports(c, retrieved_set)]
+    # A marker pointing past the evidence cites something that does not exist.
+    unsupported += [f"excerpt {marker}" for marker in invalid]
+
     answer = Answer(
         question=question,
-        text=text,
-        citations=[c for c in cited if _supports(c, retrieved_set)],
-        unsupported_citations=[c for c in cited if not _supports(c, retrieved_set)],
+        text=rendered,
+        citations=citations,
+        unsupported_citations=unsupported,
         retrieved=retrieved,
     )
     if trace is not None:
-        with trace.span("verify_citations", cited=cited) as span:
+        with trace.span("verify_citations", cited=citations + unsupported) as span:
             span.record(
                 supported=answer.citations,
                 unsupported=answer.unsupported_citations,
                 grounded=answer.is_grounded,
+                resolved_from_excerpts=resolved,
             )
     return answer

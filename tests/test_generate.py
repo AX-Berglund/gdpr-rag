@@ -7,6 +7,7 @@ from gdpr_rag.generate import (
     answer_question,
     extract_citations,
     format_context,
+    resolve_excerpts,
 )
 from gdpr_rag.ingest.models import Chunk, ChunkKind
 from gdpr_rag.store.sqlite_store import SearchResult
@@ -65,6 +66,92 @@ class TestExtractCitations:
     def test_duplicates_collapse_but_order_is_kept(self):
         text = "Article 17(1) says X. Article 4 defines Y. Article 17(1) again."
         assert extract_citations(text) == ["Article 17(1)", "Article 4"]
+
+
+class TestResolveExcerpts:
+    """Citing by excerpt number, so a citation cannot be mistyped into another.
+
+    This exists because of a real answer: shown Article 13(3), the model
+    paraphrased it correctly and cited "Article 3(3)" — one digit dropped, onto
+    a real article about territorial scope. Verification caught it, but the
+    answer was already wrong. A number the model was handed cannot drift.
+    """
+
+    def test_a_marker_becomes_the_citation_of_that_excerpt(self):
+        text, resolved, invalid = resolve_excerpts("Erasure applies [1].", RESULTS)
+        assert text == "Erasure applies Article 17(1)."
+        assert resolved == ["Article 17(1)"]
+        assert invalid == []
+
+    def test_each_marker_resolves_independently(self):
+        text, resolved, _ = resolve_excerpts("First [1], then [2].", RESULTS)
+        assert text == "First Article 17(1), then Article 17(1)(a)."
+        assert resolved == ["Article 17(1)", "Article 17(1)(a)"]
+
+    def test_repeated_markers_collapse_but_every_mention_is_substituted(self):
+        text, resolved, _ = resolve_excerpts("[1] and again [1].", RESULTS)
+        assert text == "Article 17(1) and again Article 17(1)."
+        assert resolved == ["Article 17(1)"]
+
+    @pytest.mark.parametrize("marker", ["[0]", "[3]", "[99]"])
+    def test_a_marker_outside_the_evidence_is_flagged_and_left_visible(self, marker):
+        # Left in place deliberately: the claim beside it rests on nothing, and
+        # silently deleting the marker would hide that from the reader.
+        text, resolved, invalid = resolve_excerpts(f"Claimed {marker}.", RESULTS)
+        assert text == f"Claimed {marker}."
+        assert resolved == []
+        assert invalid == [marker]
+
+    @pytest.mark.parametrize(
+        "written,expected",
+        [
+            ("see excerpt [1]", "see Article 17(1)"),
+            ("see excerpts [1] and [2]", "see Article 17(1) and Article 17(1)(a)"),
+            ("see Excerpt [1]", "see Article 17(1)"),
+        ],
+    )
+    def test_the_word_excerpt_is_absorbed_rather_than_left_stranded(self, written, expected):
+        # Models write "as set out in excerpts [3] and [4]"; substituting the
+        # marker alone leaves "in excerpts Article 13(3) and Article 14(4)".
+        assert resolve_excerpts(written, RESULTS)[0] == expected
+
+    def test_an_absorbed_word_still_reports_only_the_marker(self):
+        _, _, invalid = resolve_excerpts("see excerpt [9]", RESULTS)
+        assert invalid == ["[9]"]
+
+    def test_text_without_markers_is_untouched(self):
+        text, resolved, invalid = resolve_excerpts("No markers at all.", RESULTS)
+        assert (text, resolved, invalid) == ("No markers at all.", [], [])
+
+
+class TestCitingByExcerpt:
+    def test_a_cited_excerpt_grounds_the_answer(self):
+        answer = answer_question("q", RESULTS, ScriptedModel("Data may be erased [1]."))
+        assert answer.text == "Data may be erased Article 17(1)."
+        assert answer.citations == ["Article 17(1)"]
+        assert answer.is_grounded
+
+    def test_the_model_cannot_mistype_an_article_it_never_writes(self):
+        # The digit-drop that motivated this: citing by number yields the right
+        # article even though the model wrote nothing resembling one.
+        answer = answer_question("q", RESULTS, ScriptedModel("Inform them first [2]."))
+        assert "Article 17(1)(a)" in answer.text
+        assert answer.unsupported_citations == []
+
+    def test_a_marker_past_the_evidence_is_not_grounded(self):
+        answer = answer_question("q", RESULTS, ScriptedModel("As shown [7]."))
+        assert answer.unsupported_citations == ["excerpt [7]"]
+        assert not answer.is_grounded
+
+    def test_markers_and_written_articles_are_both_accounted_for(self):
+        answer = answer_question("q", RESULTS, ScriptedModel("See [1], and Article 88."))
+        assert answer.citations == ["Article 17(1)"]
+        assert answer.unsupported_citations == ["Article 88"]
+        assert not answer.is_grounded
+
+    def test_a_marker_and_the_same_article_written_out_are_not_double_counted(self):
+        answer = answer_question("q", RESULTS, ScriptedModel("See [1] i.e. Article 17(1)."))
+        assert answer.citations == ["Article 17(1)"]
 
 
 class TestGrounding:
