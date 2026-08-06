@@ -50,6 +50,21 @@ class TestManifests:
             line == "." or line.startswith("-e .") or "gdpr-rag" in line for line in lines
         ), "manifest never installs the package itself"
 
+    def test_installs_the_package_editable(self, manifest):
+        """A copied install goes stale against a checkout that keeps moving.
+
+        With a plain ".", the package is built into the environment, and that
+        copy only advances when the environment is rebuilt — while the checkout
+        advances on every merge. A host that caches environments across restarts
+        then runs an entry point read fresh from the checkout against a library
+        snapshot that predates it. The demo died exactly this way: a merge added
+        a module, the entry point imported it, and the deployment raised
+        ModuleNotFoundError for code sitting in plain sight in the repository.
+        Editable keeps no snapshot, so the two cannot disagree.
+        """
+        lines = [line.split("#")[0].strip() for line in manifest.read_text().splitlines()]
+        assert "-e ." in lines, "a copied install drifts from the checkout; use '-e .'"
+
     def test_runtime_dependencies_are_reachable(self, manifest):
         """Base dependencies may arrive transitively or be listed outright.
 

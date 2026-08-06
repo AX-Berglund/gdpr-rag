@@ -8,11 +8,21 @@
 # ".[local]" extra syntax, so a host that handles extras differently still
 # gets it.
 #
+# It is installed editable ("-e ."), which is not a developer convenience here
+# but a correctness fix. A plain "." copies a build of the package into the
+# environment, and that copy only advances when the environment is rebuilt.
+# The checkout advances on every merge. A host that caches environments across
+# restarts therefore serves an entry point read fresh from the checkout against
+# a library snapshot that predates it, and an import of a newly added module
+# raises ModuleNotFoundError for code sitting in plain sight in the repository.
+# Editable keeps no snapshot: imports resolve from the checkout, so the entry
+# point and the library it imports cannot disagree.
+#
 # CPU-only torch: the default wheel bundles CUDA libraries that are useless on
 # a CPU host and large enough to exhaust a free tier's disk.
 --extra-index-url https://download.pytorch.org/whl/cpu
 
-.
+-e .
 torch>=2.2
 sentence-transformers>=3.0
 streamlit>=1.38
