@@ -144,6 +144,16 @@ def _budget() -> GenerationBudget:
     return GenerationBudget(per_session=per_session, per_day=per_day)
 
 
+def _session_generations() -> int:
+    return st.session_state.get("generations", 0)
+
+
+def _render_budget(slot, budget: GenerationBudget) -> None:
+    """Report what is left, from whatever the count is when this is called."""
+    left = max(0, budget.per_session - _session_generations())
+    slot.caption(f"{left} of {budget.per_session} left this visit.")
+
+
 @st.cache_resource
 def _shared_usage() -> dict:
     """Usage shared across visitors, so the daily cap is not per-session."""
@@ -196,21 +206,23 @@ def main() -> None:
         has_key = _secret_key()
         has_client = _generation_available()
         budget = _budget()
-        used = st.session_state.get("generations", 0)
         generate = st.toggle(
             "Generate a cited answer",
             value=False,
             disabled=not (has_key and has_client),
             help="Retrieval works without this, and is the part this project measures.",
         )
+        # A placeholder, because the sidebar is drawn before the request is
+        # made. Writing the count here and only here reported the allowance as
+        # it stood *before* the answer on screen was generated — it read "3 of
+        # 3 left" next to the first of three. It is filled again afterwards.
+        budget_slot = st.empty()
         if not has_key:
             st.caption("Set `OPENAI_API_KEY` to enable answer generation.")
         elif not has_client:
             st.caption("A key is set, but the `openai` client is not installed here.")
         elif generate:
-            st.caption(
-                f"{max(0, budget.per_session - used)} of {budget.per_session} left this visit."
-            )
+            _render_budget(budget_slot, budget)
 
     retriever, chunk_count = build_retriever(str(corpus), strategy, "local" if dense else "hashing")
     st.sidebar.metric("Chunks in index", chunk_count)
@@ -230,7 +242,7 @@ def main() -> None:
     if generate:
         shared = _shared_usage()
         today = date.today()
-        decision = budget.check(shared["usage"], st.session_state.get("generations", 0), today)
+        decision = budget.check(shared["usage"], _session_generations(), today)
         if not decision.allowed:
             st.info(decision.reason)
             generate = False
@@ -241,7 +253,8 @@ def main() -> None:
         # Counted before the call, not after: a failed request still costs a
         # slot, which is what stops a retry loop from spending without bound.
         shared["usage"] = budget.spend(shared["usage"], today)
-        st.session_state["generations"] = st.session_state.get("generations", 0) + 1
+        st.session_state["generations"] = _session_generations() + 1
+        _render_budget(budget_slot, budget)
 
         answer = None
         try:
