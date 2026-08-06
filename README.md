@@ -188,6 +188,44 @@ loss — which is exactly why it is measured rather than assumed.
 *Caveat: n=12 for the subject group, so 0.250 → 0.917 is three questions becoming eleven.
 The direction is unmistakable; the precision is not.*
 
+### Question decomposition does not work here
+
+A scenario usually contains several legal questions at once, and a single embedding of a
+multi-part question is a blurred average of its parts. Splitting it, retrieving for each
+part and fusing the rankings is the obvious response. It does not pay.
+
+**coverage@5, same evidence budget for every row — each returns k chunks, whatever it cost:**
+
+| strategy | questions (n=60) | scenarios (n=18) | model calls |
+|---|---|---|---|
+| none | 0.600 | 0.306 | 0 |
+| **HyDE** | **0.733** (+0.133) | **0.431** (+0.125) | 1 |
+| perspective | 0.600 (+0.000) | 0.378 (+0.072) | 1 |
+| decompose | 0.550 (−0.050) | 0.310 (+0.004) | 1 |
+| decompose + HyDE | 0.650 (+0.050) | 0.315 (+0.009) | 2 |
+
+**Decomposition is indistinguishable from doing nothing on scenarios and actively harmful
+on questions.** Worse, fusing it with a good rewriter *destroys* that rewriter: HyDE drops
+from 0.733 to 0.650, and from 0.431 to 0.315. The mechanism is not mysterious — reciprocal
+rank fusion weights every query equally, so one excellent ranking is outvoted by three
+mediocre ones. Adding queries adds noise unless you know which query to trust, and knowing
+that is the hard part.
+
+This is also a correction. The idea came from one question where decomposition surfaced an
+article that nothing else found, which looked like evidence and was an anecdote. Eighteen
+scenarios disagreed with it.
+
+**HyDE wins on both sets, which is the useful result:** it was already the recommended
+rewriter for lookups, and it turns out to be the strongest thing available for narratives
+too. There is no separate narrative strategy to build.
+
+*Method note: these numbers are means of three runs, not single measurements. HyDE scored
+0.463, 0.403 and 0.449 on identical inputs — temperature is zero, but the API is not
+bit-deterministic and a drafted paragraph compounds small divergences. At n=18 that is
+±0.024, the same size as the effects being compared, and a single run would have overstated
+HyDE's lead over perspective by half. The baseline needs no repetition: it calls no model
+and is exactly reproducible.*
+
 ## How it works
 
 ```
