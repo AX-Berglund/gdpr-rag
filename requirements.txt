@@ -1,18 +1,18 @@
 # For hosts that install from requirements.txt (Streamlit Community Cloud).
 #
-# Dependencies are listed explicitly rather than as ".[local]". A local-path
-# install depends on pip running from the repository root, which a managed host
-# does not guarantee — and when it silently does not resolve, the app installs
-# without the embedding model and quietly serves the weak lexical baseline.
+# The first line installs THIS package. Without it a host resolves the
+# dependencies and then fails on `import gdpr_rag`, because a requirements.txt
+# supersedes pyproject.toml rather than supplementing it.
+#
+# The embedding stack is then named outright rather than relying on the
+# ".[local]" extra syntax, so a host that handles extras differently still
+# gets it.
 #
 # CPU-only torch: the default wheel bundles CUDA libraries that are useless on
 # a CPU host and large enough to exhaust a free tier's disk.
 --extra-index-url https://download.pytorch.org/whl/cpu
 
-numpy>=1.24
-pydantic>=2.0
-pyyaml>=6.0
-lxml>=5.0
+.
 torch>=2.2
 sentence-transformers>=3.0
 streamlit>=1.38
