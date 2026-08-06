@@ -217,6 +217,15 @@ supports citing `Article 17`, but having retrieved only `Article 15` does not su
 claim about `Article 15(3)`. When retrieval returns nothing, the model is never called at
 all — an unanswerable question should not come back as a fluent guess.
 
+Checking turned out not to be enough on its own. Shown `Article 13(3)`, a model
+paraphrased it correctly and cited `Article 3(3)` — one digit dropped, onto a real article
+about territorial scope. The check caught it, but the answer was already wrong, and a
+plausible miscitation is worse than an obvious one. So the model now cites by excerpt
+number (`[2]`) and the article citation is substituted in from what retrieval returned. A
+number it was handed cannot be mistyped into a different article, which turns the common
+failure from *detected* into *impossible*. Article numbers written out anyway are still
+verified, because an instruction is not a guarantee.
+
 ---
 
 ### Seeing what happened
