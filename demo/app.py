@@ -14,10 +14,17 @@ is the part this project measures, and it needs no key.
 from __future__ import annotations
 
 import os
+from datetime import date
 from pathlib import Path
 
 import streamlit as st
 
+from gdpr_rag.budget import (
+    DEFAULT_PER_DAY,
+    DEFAULT_PER_SESSION,
+    GenerationBudget,
+    Usage,
+)
 from gdpr_rag.config import load_env
 from gdpr_rag.embed import HashingEmbedder
 from gdpr_rag.evaluation import load_questions
@@ -101,6 +108,37 @@ def _examples() -> list[str]:
     return found or FALLBACK_EXAMPLES
 
 
+def _secret_key() -> bool:
+    """Make an API key from Streamlit secrets visible to the library.
+
+    Secrets are stored by the host, not in the repository. The key is read
+    server-side and never reaches the browser.
+    """
+    try:
+        key = st.secrets.get("OPENAI_API_KEY", "")
+    except Exception:
+        key = ""
+    if key and not os.environ.get("OPENAI_API_KEY"):
+        os.environ["OPENAI_API_KEY"] = key
+    return bool(os.environ.get("OPENAI_API_KEY"))
+
+
+def _budget() -> GenerationBudget:
+    """Limits, overridable per deployment without a code change."""
+    try:
+        per_session = int(st.secrets.get("GEN_PER_SESSION", DEFAULT_PER_SESSION))
+        per_day = int(st.secrets.get("GEN_PER_DAY", DEFAULT_PER_DAY))
+    except Exception:
+        per_session, per_day = DEFAULT_PER_SESSION, DEFAULT_PER_DAY
+    return GenerationBudget(per_session=per_session, per_day=per_day)
+
+
+@st.cache_resource
+def _shared_usage() -> dict:
+    """Usage shared across visitors, so the daily cap is not per-session."""
+    return {"usage": Usage(day=date.today())}
+
+
 def find_corpus() -> Path | None:
     for directory in CORPUS_DIRS:
         found = next(iter(sorted(directory.glob("*.html"))), None)
@@ -144,15 +182,21 @@ def main() -> None:
         )
         k = st.slider("Results", min_value=1, max_value=10, value=5)
 
-        has_key = bool(os.environ.get("OPENAI_API_KEY"))
+        has_key = _secret_key()
+        budget = _budget()
+        used = st.session_state.get("generations", 0)
         generate = st.toggle(
             "Generate a cited answer",
             value=False,
             disabled=not has_key,
-            help="Needs OPENAI_API_KEY. Retrieval works without it.",
+            help="Retrieval works without this, and is the part this project measures.",
         )
         if not has_key:
             st.caption("Set `OPENAI_API_KEY` to enable answer generation.")
+        elif generate:
+            st.caption(
+                f"{max(0, budget.per_session - used)} of {budget.per_session} left this visit."
+            )
 
     retriever, chunk_count = build_retriever(str(corpus), strategy, "local" if dense else "hashing")
     st.sidebar.metric("Chunks in index", chunk_count)
@@ -170,7 +214,20 @@ def main() -> None:
     results = retriever.retrieve(question, k=k, trace=trace)
 
     if generate:
+        shared = _shared_usage()
+        today = date.today()
+        decision = budget.check(shared["usage"], st.session_state.get("generations", 0), today)
+        if not decision.allowed:
+            st.info(decision.reason)
+            generate = False
+
+    if generate:
         from gdpr_rag.llm import OpenAIModel
+
+        # Counted before the call, not after: a failed request still costs a
+        # slot, which is what stops a retry loop from spending without bound.
+        shared["usage"] = budget.spend(shared["usage"], today)
+        st.session_state["generations"] = st.session_state.get("generations", 0) + 1
 
         with st.spinner("Generating..."):
             answer = answer_question(question, results, OpenAIModel(), trace=trace)

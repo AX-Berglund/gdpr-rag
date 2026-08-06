@@ -353,7 +353,13 @@ streamlit run demo/app.py
 The chunking strategy is a control in the sidebar, so you can ask one question and
 watch structured and fixed-size retrieval disagree — the table above, made touchable.
 Retrieval needs no API key. To also generate a cited answer, copy `.env.example` to `.env`
-and add an `OPENAI_API_KEY` — `.env` is gitignored. Any citation the model produces that
+and add an `OPENAI_API_KEY` — `.env` is gitignored.
+
+A public deployment that supplies its own key spends its owner's money on strangers, so
+generation is capped: a few answers per visit and a daily ceiling, after which the demo
+declines and retrieval carries on unaffected. Set `GEN_PER_SESSION` and `GEN_PER_DAY` to
+change the limits. This is a second line of defence — the first is a spending limit set
+with the API provider, which is the only thing that holds if the process restarts. Any citation the model produces that
 retrieval did not return is flagged as an error above the evidence.
 
 ---
