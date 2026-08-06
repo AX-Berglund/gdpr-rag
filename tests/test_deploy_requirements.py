@@ -95,3 +95,21 @@ class TestManifests:
 
     def test_includes_streamlit(self, manifest):
         assert "streamlit" in names(manifest)
+
+
+class TestGenerationDependency:
+    """The app that offers generation must be able to perform it.
+
+    Only the root manifest is asserted: it serves demo/app.py, the entry point
+    that generates. deploy/app.py is retrieval-only, and carrying a client it
+    never imports would be weight for nothing.
+    """
+
+    def test_root_manifest_includes_the_openai_client(self):
+        """A key without a client is a toggle that fails at the moment of use.
+
+        openai sits in an optional extra, and a plain install does not fetch
+        extras. The deployed demo enabled generation off the presence of a key
+        alone, then raised ImportError on the first request.
+        """
+        assert "openai" in names(ROOT / "requirements.txt")

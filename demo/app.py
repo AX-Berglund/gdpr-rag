@@ -13,6 +13,7 @@ is the part this project measures, and it needs no key.
 
 from __future__ import annotations
 
+import importlib.util
 import os
 from datetime import date
 from pathlib import Path
@@ -123,6 +124,16 @@ def _secret_key() -> bool:
     return bool(os.environ.get("OPENAI_API_KEY"))
 
 
+def _generation_available() -> bool:
+    """Whether the client generation would call is actually installed.
+
+    A key alone is not enough. The openai package lives in an extra, so an
+    environment can hold a valid key and no way to spend it — which offered a
+    working-looking toggle and then failed at the moment of use.
+    """
+    return importlib.util.find_spec("openai") is not None
+
+
 def _budget() -> GenerationBudget:
     """Limits, overridable per deployment without a code change."""
     try:
@@ -183,16 +194,19 @@ def main() -> None:
         k = st.slider("Results", min_value=1, max_value=10, value=5)
 
         has_key = _secret_key()
+        has_client = _generation_available()
         budget = _budget()
         used = st.session_state.get("generations", 0)
         generate = st.toggle(
             "Generate a cited answer",
             value=False,
-            disabled=not has_key,
+            disabled=not (has_key and has_client),
             help="Retrieval works without this, and is the part this project measures.",
         )
         if not has_key:
             st.caption("Set `OPENAI_API_KEY` to enable answer generation.")
+        elif not has_client:
+            st.caption("A key is set, but the `openai` client is not installed here.")
         elif generate:
             st.caption(
                 f"{max(0, budget.per_session - used)} of {budget.per_session} left this visit."
@@ -229,20 +243,33 @@ def main() -> None:
         shared["usage"] = budget.spend(shared["usage"], today)
         st.session_state["generations"] = st.session_state.get("generations", 0) + 1
 
-        with st.spinner("Generating..."):
-            answer = answer_question(question, results, OpenAIModel(), trace=trace)
-        st.subheader("Answer")
-        st.write(answer.text)
-        if answer.unsupported_citations:
+        answer = None
+        try:
+            with st.spinner("Generating..."):
+                answer = answer_question(question, results, OpenAIModel(), trace=trace)
+        except Exception as exc:
+            # Generation is the only stage that depends on somebody else's
+            # service. Exhausted credit, a rate limit or a revoked key should
+            # cost the answer and nothing more — the retrieved articles below
+            # are already computed, and they are what this project measures.
             st.error(
-                "Cited articles that retrieval did not return: "
-                + ", ".join(answer.unsupported_citations)
-                + ". These are unsupported by the evidence shown below."
+                "Generation failed, so only the retrieved articles are shown. "
+                f"({type(exc).__name__})"
             )
-        elif answer.is_grounded:
-            st.success("Every citation is backed by a retrieved article.")
-        else:
-            st.warning("The answer cites nothing, so no claim is grounded in the text.")
+
+        if answer is not None:
+            st.subheader("Answer")
+            st.write(answer.text)
+            if answer.unsupported_citations:
+                st.error(
+                    "Cited articles that retrieval did not return: "
+                    + ", ".join(answer.unsupported_citations)
+                    + ". These are unsupported by the evidence shown below."
+                )
+            elif answer.is_grounded:
+                st.success("Every citation is backed by a retrieved article.")
+            else:
+                st.warning("The answer cites nothing, so no claim is grounded in the text.")
         st.divider()
 
     st.subheader("Retrieved articles")
